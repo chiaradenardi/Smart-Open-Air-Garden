@@ -1,0 +1,42 @@
+{
+    "broker": {
+        "ip": "127.0.0.1",
+        "port": 1883
+    },
+    "water_price_per_m3": 2.0,
+    "services": [
+        {
+            "serviceID": "influxdb_adaptor",
+            "url": "http://127.0.0.1:8081",
+            "last_update": "2026-03-08 19:30"
+        },
+        {
+            "serviceID": "weather_service",
+            "url": "http://api.weather.com/v1",
+            "last_update": "2026-03-08 19:30"
+        }
+    ],
+    "irrigation_strategies": {
+        "P1": {
+            "name": "Pomodori",
+            "min_moisture_threshold": 40.0
+        },
+        "P2": {
+            "name": "Basilico",
+            "min_moisture_threshold": 60.0
+        }
+    },
+    
+    "garden_slots": [
+    {
+        "slotID": "S1",
+        "plantID": "P1",
+        "mqtt_topics": {
+            "moisture": "garden/S1/moisture",
+            "pump_command": "garden/S1/pump",
+            "temp_hum": "garden/S1/environment"
+        }
+    }
+]
+ 
+}
