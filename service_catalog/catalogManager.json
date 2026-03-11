@@ -1,19 +1,150 @@
 {
+    "lastUpdateJSON": 1771102729.8,
     "broker": {
-        "ip": "127.0.0.1",
+        "broker_name": "test.mosquitto.org",
         "port": 1883
     },
-    "water_price_per_m3": 2.0,
-    "services": [
+    "waterPricePerM3": 2.0,
+    "devicesList":[
         {
-            "serviceID": "influxdb_adaptor",
-            "url": "http://127.0.0.1:8081",
-            "last_update": "2026-03-08 19:30"
+            "deviceID": "RPi_001",
+            "deviceName": "GardenGatewayConnector_001",
+            "status": "active",
+            "sensors": ["SoilMoisture", "DHT11"],
+            "actuators": ["MicroServoPump"],
+            "config": {
+                "clientID": "Client_RPi_001",
+                "telemetry_topic": "garden/RPi_001/telemetry",
+                "command_topic": "garden/RPi_001/pump"
+        },
+        "lastUpdate": 1771102729.8
         },
         {
-            "serviceID": "weather_service",
-            "url": "http://api.weather.com/v1",
-            "last_update": "2026-03-08 19:30"
+            "deviceID": "RPi_002",
+            "deviceName": "GardenGatewayConnector_002",
+            "status": "active",
+            "sensors": ["SoilMoisture", "DHT11"],
+            "actuators": ["MicroServoPump"],
+            "config": {
+                "clientID": "Client_RPi_002",
+                "telemetry_topic": "garden/RPi_002/telemetry",
+                "command_topic": "garden/RPi_002/pump"
+            },
+        "lastUpdate": 1771102729.8
+        }
+
+    ],
+    "servicesList": [
+        {
+            "serviceID": "01",
+            "serviceName": "SmartIrrigationStrategy",
+            "status": "active",
+            "MQTT": {
+                "topicSub": [
+                    "garden/+/telemetry" 
+                ],
+                "topicPub": [
+                    "garden/+/pump"
+                ]
+            },
+            "REST": {
+                "serverHost": "127.0.0.1",
+                "serverPort": 8081
+            },
+            "lastUpdate": 1771102729.8
+        },
+        {
+            "serviceID": "02",
+            "serviceName": "FaultDetectionService",
+            "status": "active",
+            "MQTT": {
+                "topicSub": [
+                    "garden/+/telemetry",
+                    "garden/+/pump"
+                ],
+                "topicPub": [
+                    "garden/+/alert"
+                ]
+            },
+            "REST": {
+                "serverHost": "127.0.0.1",
+                "serverPort": 8082
+            },
+            "lastUpdate": 1771102729.8
+        },
+        {
+            "serviceID": "03",
+            "serviceName": "StatisticAnalyticsService",
+            "status": "active",
+            "MQTT": {
+                "topicSub": [],
+                "topicPub": []
+            },
+            "REST": {
+                "serverHost": "127.0.0.1",
+                "serverPort": 8083
+            },
+            "lastUpdate": 1771102729.8
+        },
+        {
+            "serviceID": "04",
+            "serviceName": "InfluxDBAdaptor",
+            "status": "active",
+            "MQTT": {
+                "topicSub": [
+                    "garden/+/telemetry",
+                    "garden/+/pump"
+                ],
+                "topicPub": []
+            },
+            "REST": {
+                "serverHost": "127.0.0.1",
+                "serverPort": 8084
+            },
+            "lastUpdate": 1771102729.8
+        },
+        {
+            "serviceID": "05",
+            "serviceName": "WeatherServiceAdaptor",
+            "status": "active",
+            "MQTT": {
+                "topicSub": [],
+                "topicPub": []
+            },
+            "REST": {
+                "serverHost": "127.0.0.1",
+                "serverPort": 8085
+            },
+            "lastUpdate": 1771102729.8
+        },
+        {
+            "serviceID": "06",
+            "serviceName": "TelegramBot",
+            "status": "active",
+            "MQTT": {
+                "topicSub": [
+                    "garden/+/alert",
+                    "garden/+/pump"
+                ],
+                "topicPub": []
+            },
+            "REST": {
+                "serverHost": "127.0.0.1",
+                "serverPort": 8086
+            },
+            "lastUpdate": 1771102729.8
+        }
+    ],
+    "usersList":[
+        {
+            "userID": "U_001",
+            "userName": "Davide",
+            "telegramChatID": "123456789"
+        },
+        {
+            "userID": "U_002",
+            "userName": "Mario",
+            "telegramChatID": "000000002"
         }
     ],
     "irrigation_strategies": {
@@ -26,17 +157,21 @@
             "min_moisture_threshold": 60.0
         }
     },
-    
-    "garden_slots": [
-    {
-        "slotID": "S1",
-        "plantID": "P1",
-        "mqtt_topics": {
-            "moisture": "garden/S1/moisture",
-            "pump_command": "garden/S1/pump",
-            "temp_hum": "garden/S1/environment"
+   "garden_slots": [
+        {
+            "slotID": "S1",
+            "slotName": "Orto Nord",
+            "plantID": "P1",
+            "deviceID": "RPi_001",
+            "status": "active"
+        },
+        {
+            "slotID": "S2",
+            "slotName": "Balcone Sud",
+            "plantID": "P2",
+            "deviceID": "RPi_002",
+            "status": "active"
         }
-    }
-]
+    ]
  
 }
