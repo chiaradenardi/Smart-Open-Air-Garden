@@ -15,3 +15,20 @@ services:
       - "1880:1880"
     depends_on:
       - message-broker
+  
+  #****************************************************************************************
+  # --- AGGIUNTO DA Davide 12/03/2026: Il Database ---
+  #****************************************************************************************
+
+  influxdb:
+    image: influxdb:2
+    ports:
+      - "8086:8086"
+    environment:
+      # Configurazione automatica! Non dovrai farla dal browser
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=davide
+      - DOCKER_INFLUXDB_INIT_PASSWORD=Progetto1234
+      - DOCKER_INFLUXDB_INIT_ORG=SmartGarden
+      - DOCKER_INFLUXDB_INIT_BUCKET=telemetry_data
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=Token_123456789
