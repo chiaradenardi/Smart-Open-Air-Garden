@@ -15,7 +15,7 @@ class BrokerEndpoint:
             data=json.load(f)
         broker=data["broker"]
         pack_to_send={
-            "broker_ip":broker["broker_name"],
+            "broker_name":broker["broker_name"],
             "broker_port":broker["port"]
         }
         return json.dumps(pack_to_send,indent=4)
