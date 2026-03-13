@@ -50,7 +50,7 @@ class InfluxDBAdaptor:
 
     def start(self):
         self.mqtt_client.start()
-        self.mqtt_client.mySubscribe("ProgettoIoT_garden/#")
+        self.mqtt_client.mySubscribe("garden/#")
         pass
 
     def stop(self):
@@ -63,6 +63,9 @@ class InfluxDBAdaptor:
         #******************************************************************************
         # DA COMPLETARE
         #******************************************************************************
+
+        
+
 
         msg_string = payload.decode('utf-8')
         print(f"--- MESSAGGIO RICEVUTO --- Topic: {topic} | Contenuto: {msg_string}")
@@ -95,10 +98,23 @@ class InfluxDBAdaptor:
                 sensor_name = measurement["n"]
                 value = measurement["v"]
                 timestamp = measurement["t"]
+
+                if "pump" in topic:
+                    #*************************************************************************
+                    #[{"bn": "RPi_001/","n": "pump_status","v": 1,"u": "on/off","t": 1773413500}]
+                    #*************************************************************************
+                    name_measurement="actuator_activity"
+                elif "telemetry" in topic:
+                    name_measurement="environmental_data"
+                else:
+                    # Se non è né pompa né telemetria, saltiamo questo giro e andiamo al prossimo
+                    print(f"[DEBUG] Topic ignorato: {topic}")
+                    continue
+
                 
                 # 3. Crei il dizionario JSON per InfluxDB
                 record_json = {
-                    "measurement": "environmental_data",
+                    "measurement": name_measurement,
                     "tags": {
                         "device": device_id,
                         "sensor_type": sensor_name
@@ -130,15 +146,24 @@ class InfluxRESTService:
         # 1. Recuperi i parametri dall'URL (es. ?sensor_type=soil_moisture&period=7d)
         sensor_type = params.get("sensor_type", "temperature")
         period = params.get("period", "7d") # default ultimi 7 giorni
-        
-        # 2. Scrivi la "Flux Query" (la richiesta per il database)
-        query = f"""
+
+        if sensor_type == "pump_status":
+            query = f"""
             from(bucket: "telemetry_data")
             |> range(start: -{period})
-            |> filter(fn: (r) => r._measurement == "environmental_data")
+            |> filter(fn: (r) => r._measurement == "actuator_activity")
             |> filter(fn: (r) => r.sensor_type == "{sensor_type}")
             |> filter(fn: (r) => r._field == "value")
         """
+        else:
+            # 2. Scrivi la "Flux Query" (la richiesta per il database)
+            query = f"""
+                from(bucket: "telemetry_data")
+                |> range(start: -{period})
+                |> filter(fn: (r) => r._measurement == "environmental_data")
+                |> filter(fn: (r) => r.sensor_type == "{sensor_type}")
+                |> filter(fn: (r) => r._field == "value")
+            """
         try:
             # 3. Esegui la query
             tabelle_risultato = self.db_client.query_api().query(org="SmartGarden", query=query)
