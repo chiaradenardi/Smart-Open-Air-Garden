@@ -15,6 +15,8 @@ services:
       - "1880:1880"
     depends_on:
       - message-broker
+    volumes:
+      - ./node_red_data:/data
   
   #****************************************************************************************
   # --- AGGIUNTO DA Davide 12/03/2026: Il Database ---
