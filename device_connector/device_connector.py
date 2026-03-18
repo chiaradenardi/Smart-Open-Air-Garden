@@ -2,103 +2,113 @@ import requests
 import time
 import random
 import json
+import os
 import paho.mqtt.client as mqtt
 
-# --- CONFIGURAZIONI GLOBALI ---
-CATALOG_URL = "http://<IP_DEL_CATALOG>:8080/device_config"
+#DA MODIFICARE 
+
+# --- CONFIGURATION FOR DOCKER VARIABLES ---
+### NEED TO SET WITH CORRECT URL OF CATALOG (IF NOT USING DOCKER, DEFAULT IS LOCALHOST)
+CATALOG_URL = os.getenv("CATALOG_URL", "http://127.0.0.1:8080/device_config")
+
+# Global variable for state of simulated pump
 pump_state = "OFF"  # Variabile globale che simula lo stato del nostro attuatore fisico
 
-# --- FUNZIONI DI SIMULAZIONE (Mock) ---
+# --- HARDWARE SIMULATION ---
 def simulate_sensors(current_moisture):
-    """Simula i dati del sensore DHT11 e l'umidità del suolo."""
+    """Simulation of DHT11 and humidity sensors"""
     temp = round(random.uniform(20.0, 24.0), 1)
     air_humidity = round(random.uniform(40.0, 50.0), 1)
     
     global pump_state
     if pump_state == "ON":
-        new_moisture = 100.0  # La pompa innaffia, il terreno si satura
+        new_moisture = 100.0  # Pump is on, soil is fully watered
     else:
-        new_moisture = max(0.0, current_moisture - 0.5)  # Si asciuga lentamente
+        new_moisture = max(0.0, current_moisture - 0.5)  # Soil dries slowly
         
     return temp, air_humidity, new_moisture
 
-# --- FUNZIONI REST ---
+# --- REST FUNCTIONS ---
 def get_broker_config():
-    """Contatta il Catalog via REST per ottenere le configurazioni all'avvio[cite: 42]."""
-    print("[INIT] Contattando il Service & Resource Catalog via REST...")
+    """Contact the Catalog via REST to get the configurations at startup, in particular Broker's IP and topics."""
+    print("[INIT] Contacting the Service & Resource Catalog via REST")
     try:
         response = requests.get(CATALOG_URL, timeout=10)
         response.raise_for_status()
         config_data = response.json()
-        print(f"[INIT] Configurazione ricevuta: {config_data}")
+        print(f"[INIT] Configuration received from Catalog: {config_data}")
         return config_data
     except requests.exceptions.RequestException as e:
-        print(f"[ERRORE] Impossibile contattare il Catalog. Dettaglio: {e}")
+        print(f"[ERROR] Impossible to contact Catalog. Detail: {e}")
         return None
 
-# --- CALLBACK MQTT ---
+# --- MQTT CALLBACK ---
 def on_connect(client, userdata, flags, rc):
     """Callback eseguita quando il client si connette al broker."""
     if rc == 0:
-        print("[MQTT] Connesso al Message Broker con successo!")
-        # Non appena connesso, agisce da Subscriber iscrivendosi al topic dei comandi 
+        print("[MQTT] Successfully connected to MQTT Broker")
+        # Once connected, it will act as a Subscriber by subscribing to the command topic
         client.subscribe(userdata['command_topic'])
-        print(f"[MQTT] In ascolto dei comandi sul topic: {userdata['command_topic']}")
+        print(f"[MQTT] Listening to topic commands: {userdata['command_topic']}")
     else:
-        print(f"[MQTT] Errore di connessione. Codice: {rc}")
+        print(f"[MQTT] Error connecting to MQTT Broker. Code: {rc}")
 
 def on_message(client, userdata, msg):
-    """Callback eseguita quando arriva un messaggio su un topic a cui siamo iscritti."""
+    """When a message is received on a topic we are subscribed to, callback is executed."""
     global pump_state
     payload = msg.payload.decode('utf-8')
-    print(f"\n[MQTT RICEVUTO] Topic: {msg.topic} | Messaggio: {payload}")
+    print(f"\n[MQTT Received] Topic: {msg.topic} | Action: {payload}")
     
-    # Logica di attuazione: analizza il comando e "accende/spegne" la pompa 
+    # Attuatio logic: analizes the command and "turns on/off" the pump
     if "ON" in payload.upper():
         pump_state = "ON"
-        print(">>> [ATTUAZIONE FISICA SIMULATA] POMPA ACCESA! L'acqua scorre... <<<")
+        print("PUMP TURNED ON: Water is flowing")
     elif "OFF" in payload.upper():
         pump_state = "OFF"
-        print(">>> [ATTUAZIONE FISICA SIMULATA] POMPA SPENTA! <<<")
+        print("PUMP TURNED OFF: Water is not flowing")
 
-# --- FLUSSO PRINCIPALE ---
+# --- MAIN FLOW ---
 if __name__ == "__main__":
-    # 1. Recupero configurazioni via REST dal Catalog [cite: 42]
+    # 1. retrieving configurations via REST from the Catalog (waits until the Catalog is available)
     broker_config = None
     while not broker_config:
         broker_config = get_broker_config()
         if not broker_config:
             time.sleep(5)
-            
+
+     #extracting necessary info from the json received from the Catalog
+     ### INSERT CORRECT KEYS       
     broker_ip = broker_config.get("broker_ip", "localhost")
     telemetry_topic = broker_config.get("telemetry_topic", "garden/sensors/telemetry")
     command_topic = broker_config.get("command_topic", "garden/actuators/pump")
     
-    # 2. Inizializzazione Client MQTT
+    # 2. Setup MQTT Client and connect to the broker
     client = mqtt.Client(userdata={'command_topic': command_topic})
     client.on_connect = on_connect
     client.on_message = on_message
     
-    print(f"[SETUP] Tentativo di connessione al broker MQTT su {broker_ip}...")
-    try:
-        client.connect(broker_ip, 1883, 60)
-    except Exception as e:
-        print(f"[ERRORE MQTT] Connessione fallita: {e}")
-        exit(1)
+    print(f"[SETUP] Connecting to MQTT Broker on {broker_ip}")
+    while True:
+        try:
+            client.connect(broker_ip, 1883, 60)
+            break  # Exit the loop if connection is successful
+        except Exception as e:
+            print(f"[ERROR MQTT] Connection failed: {e}. Retrying in 5 seconds.")
+            time.sleep(5)  # Wait before retrying
         
-    # Avvia il loop MQTT in background per gestire ricezione messaggi e ping
+    # Activate MQTT Loop: Start the MQTT loop in the background to handle message reception and pings
     client.loop_start()
     
-    # 3. Ciclo Principale: Lettura sensori e Pubblicazione
-    soil_moisture = 60.0  # Umidità iniziale
+    # 3. Main Cycle: Reading sensors and Publishing telemetry
+    soil_moisture = 60.0  # Initial moisture
+    print("\n[INIT] Starting the sensor simulation and telemetry publishing loop.")    
     
     try:
-        print("\n[RUN] Avvio ciclo di invio telemetria...")
-        while True:
-            # Legge i sensori simulati
+        while True:               
+            # Reads sensors simulation (temperature, air humidity, soil moisture) and updates soil moisture based on pump state
             temp, air_hum, soil_moisture = simulate_sensors(soil_moisture)
             
-            # Prepara il payload in formato JSON
+            # Prepare the payload in JSON format
             payload = {
                 "temperature": temp,
                 "air_humidity": air_hum,
@@ -106,13 +116,13 @@ if __name__ == "__main__":
                 "timestamp": time.time()
             }
             
-            # Agisce da Publisher inviando la telemetria 
+            # Acts as a Publisher sending the telemetry
             client.publish(telemetry_topic, json.dumps(payload))
-            print(f"[TELEMETRIA INVIATA] Temp: {temp}°C | Umidità Suolo: {soil_moisture}% | Stato Pompa: {pump_state}")
+            print(f"[TELEMETRY] Temp: {temp}°C | Soil Moisture: {soil_moisture}% | Pump State: {pump_state}")
             
-            time.sleep(5)  # Frequenza di campionamento
+            time.sleep(5)  # Sampling frequency
             
     except KeyboardInterrupt:
-        print("\n[STOP] Connettore terminato dall'utente. Disconnessione in corso...")
+        print("\n[STOP] Connector terminated by user. Disconnecting.")
         client.loop_stop()
         client.disconnect()
