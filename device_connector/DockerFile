@@ -1,0 +1,19 @@
+# Start with a base image that already has Python installed
+FROM python:3.9-slim
+
+# Set the working directory inside the container to /app
+WORKDIR /app
+
+# Copy your requirements.txt file into the container
+COPY requirements.txt /app/
+
+# Install all the libraries listed in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy your Python code files into the container
+COPY device_connector.py /app/
+
+# Set the command to run when the container starts
+CMD ["python", "device_connector.py"]
+
+### MODIFY COMMENTS
