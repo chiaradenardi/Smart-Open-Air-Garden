@@ -84,7 +84,7 @@ services:
 
   # 4. IL TUO TELEGRAM BOT
   telegram_bot:
-    build: ./telegram_bot
+    build: ./Telegram_Bot
     container_name: telegram_bot
     env_file:
       - ./Telegram_Bot/.env  # Il tuo file segreto con il token
