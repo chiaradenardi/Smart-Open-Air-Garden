@@ -76,7 +76,7 @@ services:
     container_name: rpi_connector
     environment:
       # L'URL esatto che il tuo script userà per le chiamate REST
-      - CATALOG_BASE_URL=http://service-catalog:8080 
+      - CATALOG_BASE_URL=http://service-catalog:8080/broker
       - DEVICE_ID=RPi_001
     depends_on:
       - message-broker
