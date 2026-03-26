@@ -1,11 +1,9 @@
 FROM python:3.9-slim
-
 WORKDIR /app
 
-COPY requirements.txt /app/
+# Installiamo tutte le librerie necessarie direttamente:
+RUN pip install --no-cache-dir pyTelegramBotAPI paho-mqtt requests python-dotenv
 
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY telegram_bot.py /app/
-
+# Usiamo il nome esatto del tuo file con le maiuscole
+COPY telegram_bot.py .
 CMD ["python", "telegram_bot.py"]
