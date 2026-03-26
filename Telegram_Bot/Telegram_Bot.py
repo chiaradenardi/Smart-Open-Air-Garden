@@ -70,21 +70,27 @@ def handle_coltura(message):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("crop_"))
 def handle_crop_selection(call):
-    """Gestisce il click sui bottoni della coltura ed effettua la chiamata REST"""
-    coltura_scelta = call.data.split("_")[1] # Estrae 'pomodori' o 'basilico'
+    coltura_scelta = call.data.split("_")[1] 
+    
+    # Mappiamo la scelta dell'utente con gli ID presenti nel tuo catalogManager.json
+    plant_map = {"pomodori": "P1", "basilico": "P2"}
+    plant_id = plant_map.get(coltura_scelta)
     
     bot.answer_callback_query(call.id, f"Hai scelto {coltura_scelta}!")
-    bot.edit_message_text(f"⏳ Inviando la configurazione per *{coltura_scelta}* al sistema...", call.message.chat.id, call.message.message_id, parse_mode="Markdown")
     
-    # --- CHIAMATA REST (Come richiesto dal revisore) ---
     try:
-        payload = {"selected_crop": coltura_scelta}
-        response = requests.post(STRATEGY_REST_URL, json=payload, timeout=5)
+        # IMPORTANTE: Il catalogo usa PUT per aggiornare e vuole slotID e plantID
+        payload = {
+            "slotID": "S1",        # Usiamo S1 come esempio (Orto Nord)
+            "plantID": plant_id    # P1 o P2
+        }
+        # Cambiato da POST a PUT come richiesto dal tuo SlotsEndpoint.PUT
+        response = requests.put(STRATEGY_REST_URL, json=payload, timeout=5)
         response.raise_for_status()
         
-        bot.send_message(call.message.chat.id, f"✅ Configurazione aggiornata con successo! Il sistema ora ottimizzerà l'irrigazione per: {coltura_scelta}.")
-    except requests.exceptions.RequestException as e:
-        bot.send_message(call.message.chat.id, f"❌ Errore di comunicazione col server. Impossibile impostare la coltura.\nDettaglio: {e}")
+        bot.send_message(call.message.chat.id, f"✅ Configurazione aggiornata! Ora gestisco: {coltura_scelta}.")
+    except Exception as e:
+        bot.send_message(call.message.chat.id, f"❌ Errore: {e}")
 
 # --- AVVIO DEL SISTEMA ---
 if __name__ == "__main__":
