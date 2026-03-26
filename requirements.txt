@@ -6,5 +6,5 @@ RPi.GPIO==0.7.0
 Adafruit-DHT==1.2.3
 
 #for telegram bot
-telepot==12.7.0
+telebot==12.7.0
 
