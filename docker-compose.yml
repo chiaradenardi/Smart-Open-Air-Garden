@@ -87,7 +87,7 @@ services:
     build: ./telegram_bot
     container_name: telegram_bot
     env_file:
-      - ./telegram_bot/.env  # Il tuo file segreto con il token
+      - ./Telegram_Bot/.env  # Il tuo file segreto con il token
     environment:
       - BROKER_IP=message-broker
       # L'endpoint corretto per il PUT della coltura
