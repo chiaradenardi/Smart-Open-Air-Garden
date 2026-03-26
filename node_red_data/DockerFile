@@ -1,0 +1,11 @@
+FROM nodered/node-red:latest
+
+# Node-RED raccomanda di installare i nodi aggiuntivi come utente standard (node-red)
+# Installiamo la Dashboard 2.0 corretta
+RUN npm install --no-audit --no-update-notifier --no-fund --only=production \
+    @flowfuse/node-red-dashboard
+
+# Copiamo il tuo file dei flussi rinominandolo in flows.json
+COPY --chown=node-red:node-red ./project/NodeRed_ProjectV4.json /data/flows.json
+
+EXPOSE 1880
