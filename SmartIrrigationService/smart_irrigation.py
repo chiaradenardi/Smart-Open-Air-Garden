@@ -1,0 +1,105 @@
+import time
+import json
+import requests
+from MyMQTT import MyMQTT
+
+class SmartIrrigation:
+    def __init__(self, clientID, broker, port, catalog_url):
+        self.client = MyMQTT(clientID, broker, port, self)
+        self.catalog_url = catalog_url
+        
+        # Dizionario per gestire lo stato della pompa di ogni dispositivo separatamente
+        # Esempio: {"RPi_001": True, "RPi_002": False}
+        self.pumps_status = {} 
+        
+        self.weather_adaptor_url = "http://weather-service-adaptor:8085"
+        self.topic_sub = "garden/+/telemetry"
+
+    def start(self):
+        self.client.start()
+        self.client.mySubscribe(self.topic_sub)
+        print(f"--- Smart Irrigation multizona avviata ---")
+        print(f"Catalogo: {self.catalog_url}")
+        print(f"Meteo: {self.weather_adaptor_url}")
+
+    def notify(self, topic, payload):
+        try:
+            # 1. Decodifica e Parsing del messaggio
+            if isinstance(payload, bytes):
+                payload = payload.decode('utf-8')
+            msg = json.loads(payload)
+            
+            # Estrazione umidità (SenML)
+            current_moisture = None
+            for entry in msg:
+                if entry.get("n") == "soil_moisture":
+                    current_moisture = entry.get("v")
+            
+            if current_moisture is None: return 
+
+            # 2. Identificazione del dispositivo (es. RPi_001 o RPi_002)
+            device_id = topic.split('/')[1] 
+
+            # Inizializza lo stato della pompa per questo device se è la prima volta che lo vediamo
+            if device_id not in self.pumps_status:
+                self.pumps_status[device_id] = False
+
+            # 3. Recupero info dal Catalogo per lo slot specifico
+            # Cerchiamo quale pianta è associata a questo device_id
+            slots_res = requests.get(f"{self.catalog_url}/slots").json()
+            
+            plant_id = None
+            slot_name = "Ignoto"
+            for slot in slots_res:
+                if slot.get("deviceID") == device_id:
+                    plant_id = slot.get("plantID")
+                    slot_name = slot.get("slotName", "Zona")
+                    break
+            
+            if not plant_id:
+                print(f"[!] {device_id} non associato a nessuna pianta nel catalogo.")
+                return
+
+            # Recupero soglia specifica per quella pianta
+            strat_res = requests.get(f"{self.catalog_url}/strategies/{plant_id}").json()
+            moisture_threshold = strat_res.get("min_moisture_threshold", 40.0)
+            plant_name = strat_res.get("name", "Pianta")
+            
+            # Soglia di stop (20% sopra il minimo)
+            target_moisture = moisture_threshold + 20.0
+
+            print(f"[{slot_name} - {device_id}] {plant_name}: {current_moisture}% | Range: {moisture_threshold}%-{target_moisture}%")
+
+            # 4. LOGICA DI CONTROLLO (Indipendente per ogni dispositivo)
+            # A. Accensione
+            if current_moisture < moisture_threshold:
+                if not self.pumps_status[device_id]:
+                    print(f"[{device_id}] Umidità critica. Controllo meteo...")
+                    weather_res = requests.get(self.weather_adaptor_url).json()
+                    rain_6h = weather_res.get("rain_6h", 0)
+                    
+                    if rain_6h < 2.0:
+                        print(f"[{device_id}] Azione: START Irrigazione (Pioggia prevista: {rain_6h}mm)")
+                        self.client.myPublish(f"garden/{device_id}/pump", json.dumps({"status": "ON", "amount": 500}))
+                        self.pumps_status[device_id] = True
+                    else:
+                        print(f"[{device_id}] Azione: SKIP (Pioverà tra poco)")
+
+            # B. Spegnimento
+            elif current_moisture > target_moisture:
+                if self.pumps_status[device_id]:
+                    print(f"[{device_id}] Umidità ripristinata. Azione: STOP.")
+                    self.client.myPublish(f"garden/{device_id}/pump", json.dumps({"status": "OFF"}))
+                    self.pumps_status[device_id] = False
+
+        except Exception as e:
+            print(f"Errore notify per {topic}: {e}")
+
+if __name__ == "__main__":
+    print("Inizializzazione Brain...")
+    # NOTA: catalog_url deve essere senza lo slash finale
+    brain = SmartIrrigation("IrrigationBrain", "message-broker", 1883, "http://service-catalog:8080")
+    brain.start()
+    print("Sistema avviato e in ascolto!")
+    while True:
+        time.sleep(1)

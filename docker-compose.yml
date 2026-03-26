@@ -4,6 +4,7 @@ services:
   # Il Message Broker (Mosquitto) serve per la comunicazione MQTT
   message-broker:
     image: eclipse-mosquitto:latest
+    container_name: message-broker
     ports:
       - "1883:1883"
       - "9001:9001"
@@ -18,7 +19,7 @@ services:
     volumes:
       - ./node_red_data:/data
   
-  #****************************************************************************************
+  #*****************************************************************************************
   # --- AGGIUNTO DA Davide 12/03/2026: Il Database ---
   #****************************************************************************************
 
@@ -34,3 +35,36 @@ services:
       - DOCKER_INFLUXDB_INIT_ORG=SmartGarden
       - DOCKER_INFLUXDB_INIT_BUCKET=telemetry_data
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=dOzXCt01RpXm58Zh_Twn57mRkeRttHvtmbJi6FdPdM0kJh4D-7t2ldF2Ni8YeUg8QCXCqShqC6xMn8IViISstA==
+
+
+  # Il servizio che si occupa di adattare i dati meteo
+  weather-service-adaptor:
+    build: ./weather_service_adaptor
+    container_name: weather-service-adaptor
+    environment:
+      - TOMORROW_API_KEY=vl2kNb5ZvcIWSMqS7oGfKgOzLTOd7FXf
+      - CITY_NAME=Turin
+    ports:
+      - "8085:8085"
+    depends_on:
+      - service-catalog
+  
+  smart-irrigation-service:
+    build: ./SmartIrrigationService
+    container_name: smart-irrigation-service
+    environment:
+      - PYTHONUNBUFFERED=1  # <--- AGGIUNGI QUESTA RIGA
+    depends_on:
+      - message-broker
+      - service-catalog
+      - weather-service-adaptor
+    restart: always
+
+  service-catalog:
+    build: ./service_catalog
+    container_name: service-catalog
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./service_catalog/catalogManager.json:/app/catalogManager.json
+    restart: always

@@ -1,7 +1,7 @@
 {
     "lastUpdateJSON": 1771102729.8,
     "broker": {
-        "broker_name": "test.mosquitto.org",
+        "broker_name": "message-broker",
         "port": 1883
     },
     "waterPricePerM3": 2.0,
