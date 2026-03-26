@@ -68,3 +68,30 @@ services:
     volumes:
       - ./service_catalog/catalogManager.json:/app/catalogManager.json
     restart: always
+
+
+  # 3. IL TUO DEVICE CONNECTOR
+  device_connector:
+    build: ./device_connector
+    container_name: rpi_connector
+    environment:
+      # L'URL esatto che il tuo script userà per le chiamate REST
+      - CATALOG_BASE_URL=http://service-catalog:8080 
+      - DEVICE_ID=RPi_001
+    depends_on:
+      - message-broker
+      - service-catalog
+
+  # 4. IL TUO TELEGRAM BOT
+  telegram_bot:
+    build: ./Telegram_Bot
+    container_name: telegram_bot
+    env_file:
+      - ./Telegram_Bot/.env  # Il tuo file segreto con il token
+    environment:
+      - BROKER_IP=message-broker
+      # L'endpoint corretto per il PUT della coltura
+      - SLOTS_URL=http://service-catalog:8080/slots 
+    depends_on:
+      - message-broker
+      - service-catalog
