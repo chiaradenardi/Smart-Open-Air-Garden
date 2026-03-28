@@ -14,8 +14,9 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 # IP del Message Broker e del microservizio che riceve la configurazione (es. Smart Irrigation Strategy)
-BROKER_IP = "message-broker" # Cambia con l'IP reale
-STRATEGY_REST_URL = "http://service-catalog:8080/slots"
+# Read from environment variable set in docker-compose.yml
+BROKER_IP = os.getenv("BROKER_IP", "message-broker")
+STRATEGY_REST_URL = os.getenv('SLOTS_URL', 'http://service-catalog:8080/slots')
 
 # Variabile per salvare l'ID della chat dell'utente (per potergli inviare i messaggi MQTT)
 user_chat_id = None 
