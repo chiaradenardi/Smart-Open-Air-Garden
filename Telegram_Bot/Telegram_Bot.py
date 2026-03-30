@@ -104,10 +104,37 @@ def handle_crop_selection(call):
             "plantID": plant_id    # P1 o P2
         }
         # Cambiato da POST a PUT come richiesto dal tuo SlotsEndpoint.PUT
-        response = requests.put(STRATEGY_REST_URL, json=payload, timeout=5)
-        response.raise_for_status()
+        response_put = requests.put(STRATEGY_REST_URL, json=payload, timeout=5)
+        response_put.raise_for_status()
+
+        # --- FASE 2: CHIEDIAMO LO STATO AGGIORNATO DI TUTTO IL GIARDINO (GET) ---
+        response_get = requests.get(STRATEGY_REST_URL, timeout=5)
+        response_get.raise_for_status()
+        slots_data = response_get.json()
         
-        bot.send_message(call.message.chat.id, f"✅ Configurazione aggiornata! {selected_slot} ora gestisce: {coltura_scelta}.")
+        # --- FASE 3: COSTRUIAMO IL MESSAGGIO DI RIEPILOGO ---
+        nomi_piante = {"P1": "pomodori", "P2": "basilico"}
+        conteggio = {"pomodori": 0, "basilico": 0}
+        dettaglio_slot = []
+
+        # Analizziamo ogni slot ricevuto dal Catalogo
+        for slot in slots_data:
+            id_slot = slot.get("slotID")
+            id_pianta = slot.get("plantID")
+            nome_pianta = nomi_piante.get(id_pianta, "pianta sconosciuta")
+            
+            # Aggiungiamo la frase per il singolo slot
+            dettaglio_slot.append(f"nello slot {id_slot} hai {nome_pianta}")
+            
+            # Aggiorniamo i contatori totali
+            if nome_pianta in conteggio:
+                conteggio[nome_pianta] += 1
+        
+        # Assembliamo la frase finale
+        frase_slot = ", ".join(dettaglio_slot)
+        testo_finale = f"✅ Configurazione aggiornata!\n\n{frase_slot.capitalize()}.\nIn totale hai {conteggio['pomodori']} piante di pomodori e {conteggio['basilico']} piante di basilico."
+        
+        bot.send_message(call.message.chat.id, testo_finale)
     except Exception as e:
         bot.send_message(call.message.chat.id, f"❌ Errore: {e}")
 
