@@ -62,16 +62,34 @@ def handle_start(message):
 @bot.message_handler(commands=['coltura'])
 def handle_coltura(message):
     # Creiamo una tastiera (Inline Keyboard) per far scegliere la coltura
+    # STEP 1: Chiedi quale slot aggiornare
     markup = telebot.types.InlineKeyboardMarkup()
-    btn_pomodori = telebot.types.InlineKeyboardButton("🍅 Pomodori", callback_data="crop_pomodori")
-    btn_basilico = telebot.types.InlineKeyboardButton("🌿 Basilico", callback_data="crop_basilico")
+    btn_s1 = telebot.types.InlineKeyboardButton("🌱 Orto Nord (S1)", callback_data="slot_S1")
+    btn_s2 = telebot.types.InlineKeyboardButton("🌿 Balcone Sud (S2)", callback_data="slot_S2")
+    markup.add(btn_s1)
+    markup.add(btn_s2)
+    
+    bot.send_message(message.chat.id, "Quale slot vuoi aggiornare?", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("slot_"))
+def handle_slot_selection(call):
+    # Estrai lo slot selezionato (S1, S2, ecc.)
+    selected_slot = call.data.split("_")[1]
+    
+    # STEP 2: Chiedi quale pianta assegnare
+    markup = telebot.types.InlineKeyboardMarkup()
+    btn_pomodori = telebot.types.InlineKeyboardButton("🍅 Pomodori", callback_data=f"plant_pomodori_{selected_slot}")
+    btn_basilico = telebot.types.InlineKeyboardButton("🌿 Basilico", callback_data=f"plant_basilico_{selected_slot}")
     markup.add(btn_pomodori, btn_basilico)
     
-    bot.send_message(message.chat.id, "Quale coltura vuoi piantare?", reply_markup=markup)
+    bot.send_message(call.message.chat.id, f"Quale coltura per {selected_slot}?", reply_markup=markup)    
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("crop_"))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("plant_"))
 def handle_crop_selection(call):
-    coltura_scelta = call.data.split("_")[1] 
+   # Estrai la pianta e lo slot selezionati
+    parts = call.data.split("_")
+    coltura_scelta = parts[1]      # "pomodori" o "basilico"
+    selected_slot = parts[2]        # "S1", "S2", ecc. 
     
     # Mappiamo la scelta dell'utente con gli ID presenti nel tuo catalogManager.json
     plant_map = {"pomodori": "P1", "basilico": "P2"}
@@ -82,14 +100,14 @@ def handle_crop_selection(call):
     try:
         # IMPORTANTE: Il catalogo usa PUT per aggiornare e vuole slotID e plantID
         payload = {
-            "slotID": "S1",        # Usiamo S1 come esempio (Orto Nord)
+            "slotID": selected_slot,        # Usiamo lo slot selezionato
             "plantID": plant_id    # P1 o P2
         }
         # Cambiato da POST a PUT come richiesto dal tuo SlotsEndpoint.PUT
         response = requests.put(STRATEGY_REST_URL, json=payload, timeout=5)
         response.raise_for_status()
         
-        bot.send_message(call.message.chat.id, f"✅ Configurazione aggiornata! Ora gestisco: {coltura_scelta}.")
+        bot.send_message(call.message.chat.id, f"✅ Configurazione aggiornata! {selected_slot} ora gestisce: {coltura_scelta}.")
     except Exception as e:
         bot.send_message(call.message.chat.id, f"❌ Errore: {e}")
 
