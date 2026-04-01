@@ -95,3 +95,16 @@ services:
     depends_on:
       - message-broker
       - service-catalog
+
+
+#statistics service
+  statistics-service:
+    build: ./statistics-service
+    container_name: statistics-service
+    ports:
+      - "8082:8082"
+    environment:
+      - INFLUX_ADAPTOR_URL=http://influx-adaptor:8081
+    depends_on:
+      - influx-adaptor  # Quando Natalia sarà pronta
+    restart: always
