@@ -13,7 +13,7 @@ class InfluxDBAdaptor:
         self.catalog_url = catalog_url
         
         # --- DATI INFLUXDB (Hardcoded per ora, in futuro potresti prenderli dal Catalogo) ---
-        self.influx_url = "http://localhost:8086"
+        self.influx_url = "http://influxdb:8086"
         self.influx_token = "dOzXCt01RpXm58Zh_Twn57mRkeRttHvtmbJi6FdPdM0kJh4D-7t2ldF2Ni8YeUg8QCXCqShqC6xMn8IViISstA==" # Quello che hai messo nel docker-compose
         self.influx_org = "SmartGarden"
         self.influx_bucket = "telemetry_data"
@@ -203,7 +203,7 @@ class CatalogRoot: #empty class which contains all the endpoints
 
 
 if __name__ == "__main__":
-    CATALOG_URL = "http://localhost:8080" 
+    CATALOG_URL = "http://service-catalog:8080" 
     adaptor = InfluxDBAdaptor("InfluxAdaptor_001", CATALOG_URL)
     root = CatalogRoot()
     root.history = InfluxRESTService(adaptor.db_client) 
