@@ -83,3 +83,17 @@ services:
       - service-catalog
       - influxdb
     restart: always
+
+
+  statistics-service:
+    build: ./statistics-service
+    container_name: statistics-service
+    ports:
+      - "8082:8082"
+    environment:
+      # Natalia (InfluxDB Adaptor) è raggiungibile a porta 8081
+      - INFLUX_ADAPTOR_URL=http://influx-adaptor:8081
+    depends_on:
+      - influx-adaptor
+      - influxdb
+    restart: always
