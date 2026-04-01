@@ -68,44 +68,18 @@ services:
     volumes:
       - ./service_catalog/catalogManager.json:/app/catalogManager.json
     restart: always
+  
 
-
-  # 3. IL TUO DEVICE CONNECTOR
-  device_connector:
-    build: ./device_connector
-    container_name: rpi_connector
-    environment:
-      # L'URL esatto che il tuo script userà per le chiamate REST
-      - CATALOG_BASE_URL=http://service-catalog:8080/broker
-      - DEVICE_ID=RPi_001
-    depends_on:
-      - message-broker
-      - service-catalog
-
-  # 4. IL TUO TELEGRAM BOT
-  telegram_bot:
-    build: ./Telegram_Bot
-    container_name: telegram_bot
-    env_file:
-      - ./Telegram_Bot/.env  # Il tuo file segreto con il token
-    environment:
-      - BROKER_IP=message-broker
-      # L'endpoint corretto per il PUT della coltura
-      - SLOTS_URL=http://service-catalog:8080/slots 
-    depends_on:
-      - message-broker
-      - service-catalog
-
-
-#statistics service
-  statistics-service:
-    build: ./statistics-service
-    container_name: statistics-service
+  #*****************************************************************************************
+  # --- AGGIUNTO DA Davide 26/03/2026: L'InfluxDB Adaptor ---
+  #****************************************************************************************
+  influx-adaptor:
+    build: ./influx_adaptor
+    container_name: influx-adaptor
     ports:
-      - "8082:8082"
-    environment:
-      - INFLUX_ADAPTOR_URL=http://influx-adaptor:8081
+      - "8081:8081"
     depends_on:
-      - influxdb  
-      - influx-adaptor
+      - message-broker
+      - service-catalog
+      - influxdb
     restart: always
