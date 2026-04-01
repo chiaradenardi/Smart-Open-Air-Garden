@@ -5,34 +5,43 @@
         "port": 1883
     },
     "waterPricePerM3": 2.0,
-    "devicesList":[
+    "devicesList": [
         {
             "deviceID": "RPi_001",
             "deviceName": "GardenGatewayConnector_001",
             "status": "active",
-            "sensors": ["SoilMoisture", "DHT11"],
-            "actuators": ["MicroServoPump"],
+            "sensors": [
+                "SoilMoisture",
+                "DHT11"
+            ],
+            "actuators": [
+                "MicroServoPump"
+            ],
             "config": {
                 "clientID": "Client_RPi_001",
                 "telemetry_topic": "garden/RPi_001/telemetry",
                 "command_topic": "garden/RPi_001/pump"
-        },
-        "lastUpdate": 1771102729.8
+            },
+            "lastUpdate": 1771102729.8
         },
         {
             "deviceID": "RPi_002",
             "deviceName": "GardenGatewayConnector_002",
             "status": "active",
-            "sensors": ["SoilMoisture", "DHT11"],
-            "actuators": ["MicroServoPump"],
+            "sensors": [
+                "SoilMoisture",
+                "DHT11"
+            ],
+            "actuators": [
+                "MicroServoPump"
+            ],
             "config": {
                 "clientID": "Client_RPi_002",
                 "telemetry_topic": "garden/RPi_002/telemetry",
                 "command_topic": "garden/RPi_002/pump"
             },
-        "lastUpdate": 1771102729.8
+            "lastUpdate": 1771102729.8
         }
-
     ],
     "servicesList": [
         {
@@ -41,7 +50,7 @@
             "status": "active",
             "MQTT": {
                 "topicSub": [
-                    "garden/+/telemetry" 
+                    "garden/+/telemetry"
                 ],
                 "topicPub": [
                     "garden/+/pump"
@@ -135,7 +144,7 @@
             "lastUpdate": 1771102729.8
         }
     ],
-    "usersList":[
+    "usersList": [
         {
             "userID": "U_001",
             "userName": "Davide",
@@ -157,7 +166,7 @@
             "min_moisture_threshold": 60.0
         }
     },
-   "garden_slots": [
+    "garden_slots": [
         {
             "slotID": "S1",
             "slotName": "Orto Nord",
@@ -173,5 +182,4 @@
             "status": "active"
         }
     ]
- 
 }

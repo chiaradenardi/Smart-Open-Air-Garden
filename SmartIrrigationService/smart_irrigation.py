@@ -24,18 +24,16 @@ class SmartIrrigation:
 
     def notify(self, topic, payload):
         try:
-            # 1. Decodifica e Parsing del messaggio
             if isinstance(payload, bytes):
                 payload = payload.decode('utf-8')
             msg = json.loads(payload)
             
-            # Estrazione umidità (SenML)
-            current_moisture = None
-            for entry in msg:
-                if entry.get("n") == "soil_moisture":
-                    current_moisture = entry.get("v")
+            # --- MODIFICA QUI: Estrazione umidità dal formato semplice ---
+            # msg è un dizionario tipo {"soil_moisture": 60.0, ...}
+            current_moisture = msg.get("soil_moisture")
             
-            if current_moisture is None: return 
+            if current_moisture is None: 
+                return
 
             # 2. Identificazione del dispositivo (es. RPi_001 o RPi_002)
             device_id = topic.split('/')[1] 

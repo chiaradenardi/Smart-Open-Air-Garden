@@ -1,11 +1,5 @@
 FROM python:3.9-slim
-
 WORKDIR /app
-
-COPY requirements.txt /app/
-
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY telegram_bot.py /app/
-
-CMD ["python", "telegram_bot.py"]
+RUN pip install --no-cache-dir pyTelegramBotAPI paho-mqtt requests python-dotenv
+COPY Telegram_Bot.py .
+CMD ["python", "Telegram_Bot.py"]

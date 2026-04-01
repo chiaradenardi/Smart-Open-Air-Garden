@@ -1,0 +1,650 @@
+[
+    {
+        "id": "735c512bb2eabce7",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "88b2615dfaca0852",
+        "type": "ui-base",
+        "name": "SmartOpenAirGarden",
+        "path": "/dashboard",
+        "appIcon": "",
+        "includeClientData": true,
+        "acceptsClientConfig": [
+            "ui-notification",
+            "ui-control"
+        ],
+        "showPathInSidebar": false,
+        "headerContent": "page",
+        "navigationStyle": "default",
+        "titleBarStyle": "default",
+        "showReconnectNotification": true,
+        "notificationDisplayTime": 1,
+        "showDisconnectNotification": true,
+        "allowInstall": false
+    },
+    {
+        "id": "73b5b38472d99d98",
+        "type": "ui-theme",
+        "name": "Default Theme",
+        "colors": {
+            "surface": "#ffffff",
+            "primary": "#0094CE",
+            "bgPage": "#eeeeee",
+            "groupBg": "#ffffff",
+            "groupOutline": "#cccccc"
+        },
+        "sizes": {
+            "density": "default",
+            "pagePadding": "12px",
+            "groupGap": "12px",
+            "groupBorderRadius": "4px",
+            "widgetGap": "12px"
+        }
+    },
+    {
+        "id": "aa2caa278bc9b504",
+        "type": "ui-page",
+        "name": "My Garden",
+        "ui": "88b2615dfaca0852",
+        "path": "/page1",
+        "icon": "home",
+        "layout": "grid",
+        "theme": "73b5b38472d99d98",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": "0",
+                "cols": "3"
+            },
+            {
+                "name": "Tablet",
+                "px": "576",
+                "cols": "6"
+            },
+            {
+                "name": "Small Desktop",
+                "px": "768",
+                "cols": "9"
+            },
+            {
+                "name": "Desktop",
+                "px": "1024",
+                "cols": "12"
+            }
+        ],
+        "order": 1,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "713e0f73821a9161",
+        "type": "ui-group",
+        "name": "Real Time Sensors",
+        "page": "aa2caa278bc9b504",
+        "width": 6,
+        "height": 1,
+        "order": 2,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "b2ab00554b448083",
+        "type": "ui-group",
+        "name": "Statistics",
+        "page": "aa2caa278bc9b504",
+        "width": 6,
+        "height": 1,
+        "order": 1,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "968f1cab134c7246",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "localhost",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "913ea94b7f3f4398",
+        "type": "function",
+        "z": "735c512bb2eabce7",
+        "name": "function 2",
+        "func": "var datiStoriciFinti = [\n    {\"time\": \"2026-03-13T19:00:00Z\", \"value\": 35.0},\n    {\"time\": \"2026-03-13T19:15:00Z\", \"value\": 38.5},\n    {\"time\": \"2026-03-13T19:30:00Z\", \"value\": 42.0},\n    {\"time\": \"2026-03-13T19:50:00Z\", \"value\": 45.2}\n];\n\nvar messaggi = [];\nfor (var i = 0; i < datiStoriciFinti.length; i++) {\n    messaggi.push({\n        payload: datiStoriciFinti[i].value,         \n        topic: \"soil_moisture\",          \n        timestamp: new Date(datiStoriciFinti[i].time).getTime() \n    });\n}\nreturn [messaggi];",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 280,
+        "y": 280,
+        "wires": [
+            [
+                "fbe2a3f3e6a5914c",
+                "83b86a3c170dc7be"
+            ]
+        ]
+    },
+    {
+        "id": "b136585b2891a82b",
+        "type": "debug",
+        "z": "735c512bb2eabce7",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 480,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "fbe2a3f3e6a5914c",
+        "type": "debug",
+        "z": "735c512bb2eabce7",
+        "name": "debug 2",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 320,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "f43d93327c1b0fad",
+        "type": "ui-button",
+        "z": "735c512bb2eabce7",
+        "group": "b2ab00554b448083",
+        "name": "Upload Storics",
+        "label": "button",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 105,
+        "y": 276.11109924316406,
+        "wires": [
+            [
+                "913ea94b7f3f4398"
+            ]
+        ]
+    },
+    {
+        "id": "83b86a3c170dc7be",
+        "type": "ui-chart",
+        "z": "735c512bb2eabce7",
+        "group": "b2ab00554b448083",
+        "name": "dataStoric",
+        "label": "chart",
+        "order": 1,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "",
+        "xAxisPropertyType": "timestamp",
+        "xAxisType": "time",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "payload",
+        "yAxisPropertyType": "msg",
+        "ymin": "",
+        "ymax": "",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 4,
+        "showLegend": true,
+        "removeOlder": 1,
+        "removeOlderUnit": "3600",
+        "removeOlderPoints": "",
+        "colors": [
+            "#0095ff",
+            "#ff0000",
+            "#ff7f0e",
+            "#2ca02c",
+            "#a347e1",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": 8,
+        "className": "",
+        "interpolation": "linear",
+        "x": 445,
+        "y": 276.11109924316406,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0c645f0db8147e69",
+        "type": "ui-gauge",
+        "z": "735c512bb2eabce7",
+        "name": "humidityRT",
+        "group": "713e0f73821a9161",
+        "order": 1,
+        "value": "payload",
+        "valueType": "msg",
+        "width": 3,
+        "height": 3,
+        "gtype": "gauge-half",
+        "gstyle": "needle",
+        "title": "humidityRT",
+        "alwaysShowTitle": false,
+        "floatingTitlePosition": "top-left",
+        "units": "units",
+        "icon": "",
+        "prefix": "",
+        "suffix": "",
+        "segments": [
+            {
+                "from": "0",
+                "color": "#5cd65c",
+                "text": "",
+                "textType": "label"
+            },
+            {
+                "from": "4",
+                "color": "#ffc800",
+                "text": "",
+                "textType": "label"
+            },
+            {
+                "from": "7",
+                "color": "#ea5353",
+                "text": "",
+                "textType": "label"
+            }
+        ],
+        "min": "10",
+        "max": "100",
+        "sizeThickness": 16,
+        "sizeGap": 4,
+        "sizeKeyThickness": 8,
+        "styleRounded": true,
+        "styleGlow": false,
+        "className": "",
+        "x": 610,
+        "y": 120,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "7e29f6b9e7ba1fc3",
+        "type": "mqtt in",
+        "z": "735c512bb2eabce7",
+        "name": "",
+        "topic": "garden/+/telemetry",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "968f1cab134c7246",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 130,
+        "y": 140,
+        "wires": [
+            [
+                "80ab69de0eadd63e"
+            ]
+        ]
+    },
+    {
+        "id": "80ab69de0eadd63e",
+        "type": "json",
+        "z": "735c512bb2eabce7",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 290,
+        "y": 140,
+        "wires": [
+            [
+                "3908f7dfebde91dc"
+            ]
+        ]
+    },
+    {
+        "id": "3908f7dfebde91dc",
+        "type": "function",
+        "z": "735c512bb2eabce7",
+        "name": "function 1",
+        "func": "// Il payload in arrivo è la lista (array) di sensori SenML\nvar sensori = msg.payload;\n\n// Prepariamo due messaggi vuoti\nvar msgUmidita = null;\nvar msgTemperatura = null;\n\n// Controlliamo che i dati siano effettivamente una lista\nif (Array.isArray(sensori)) {\n    // Passiamo in rassegna ogni elemento della lista\n    for (var i = 0; i < sensori.length; i++) {\n        var dato = sensori[i];\n\n        // Se l'elemento (n) si chiama umidità del suolo...\n        if (dato.n === \"soil_moisture\") {\n            // ...estraiamo il valore (v) e prepariamo il messaggio\n            msgUmidita = { payload: dato.v };\n        }\n        // Se invece si chiama temperatura...\n        else if (dato.n === \"temperature\") {\n            // ...estraiamo il suo valore\n            msgTemperatura = { payload: dato.v };\n        }\n    }\n}\n\n// Restituiamo i due messaggi separati. \n// Il primo andrà all'uscita 1 (in alto), il secondo all'uscita 2 (in basso).\nreturn [msgUmidita, msgTemperatura];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 140,
+        "wires": [
+            [
+                "b136585b2891a82b",
+                "0c645f0db8147e69"
+            ],
+            [
+                "47aaad8b5b3807d3"
+            ]
+        ]
+    },
+    {
+        "id": "47aaad8b5b3807d3",
+        "type": "ui-gauge",
+        "z": "735c512bb2eabce7",
+        "name": "temperatureRT",
+        "group": "713e0f73821a9161",
+        "order": 0,
+        "value": "payload",
+        "valueType": "msg",
+        "width": 3,
+        "height": 3,
+        "gtype": "gauge-half",
+        "gstyle": "needle",
+        "title": "temperatureRT",
+        "alwaysShowTitle": false,
+        "floatingTitlePosition": "top-left",
+        "units": "units",
+        "icon": "",
+        "prefix": "",
+        "suffix": "",
+        "segments": [
+            {
+                "from": "0",
+                "color": "#5cd65c",
+                "text": "",
+                "textType": "label"
+            },
+            {
+                "from": "4",
+                "color": "#ffc800",
+                "text": "",
+                "textType": "label"
+            },
+            {
+                "from": "7",
+                "color": "#ea5353",
+                "text": "",
+                "textType": "label"
+            }
+        ],
+        "min": 0,
+        "max": 10,
+        "sizeThickness": 16,
+        "sizeGap": 4,
+        "sizeKeyThickness": 8,
+        "styleRounded": true,
+        "styleGlow": false,
+        "className": "",
+        "x": 600,
+        "y": 160,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "008b8a60c5397371",
+        "type": "inject",
+        "z": "735c512bb2eabce7",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "[{\"bn\":\"RPi_001/\",\"n\":\"temperature\",\"v\":23.5,\"u\":\"Cel\",\"t\":1773413500},{\"n\":\"soil_moisture\",\"v\":45.2,\"u\":\"%RH\",\"t\":1773413500}]",
+        "payloadType": "json",
+        "x": 270,
+        "y": 40,
+        "wires": [
+            [
+                "3908f7dfebde91dc"
+            ]
+        ]
+    },
+    {
+        "id": "d70e4252708f8899",
+        "type": "comment",
+        "z": "735c512bb2eabce7",
+        "name": "",
+        "info": "connecting nodered with mqtt in rt",
+        "x": 60,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "cb2f3eb7fbb80fda",
+        "type": "comment",
+        "z": "735c512bb2eabce7",
+        "name": "",
+        "info": "statistiche sui dati raccolti",
+        "x": 100,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "5bfe9f536b8a9d55",
+        "type": "http request",
+        "z": "735c512bb2eabce7",
+        "name": "",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://host.docker.internal:5000/api/water-saved",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 270,
+        "y": 460,
+        "wires": [
+            [
+                "3a56cb622af6a191"
+            ]
+        ]
+    },
+    {
+        "id": "926d5a1a5b3d371a",
+        "type": "ui-button",
+        "z": "735c512bb2eabce7",
+        "group": "b2ab00554b448083",
+        "name": "efficiency-calculus",
+        "label": "EffButton",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "emulateClick": false,
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "iconPosition": "left",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "buttonColor": "",
+        "textColor": "",
+        "iconColor": "",
+        "enableClick": true,
+        "enablePointerdown": false,
+        "pointerdownPayload": "",
+        "pointerdownPayloadType": "str",
+        "enablePointerup": false,
+        "pointerupPayload": "",
+        "pointerupPayloadType": "str",
+        "x": 90,
+        "y": 460,
+        "wires": [
+            [
+                "5bfe9f536b8a9d55"
+            ]
+        ]
+    },
+    {
+        "id": "b7df4f5a42c06cc3",
+        "type": "comment",
+        "z": "735c512bb2eabce7",
+        "name": "",
+        "info": "statistics e analitycs service",
+        "x": 100,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "d25f2422ff32041b",
+        "type": "ui-text",
+        "z": "735c512bb2eabce7",
+        "group": "b2ab00554b448083",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "ReportEfficiency",
+        "label": "text",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": false,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 580,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "3a56cb622af6a191",
+        "type": "function",
+        "z": "735c512bb2eabce7",
+        "name": "function 3",
+        "func": "// Prendo tutto il pacchetto JSON e isolo solo la riga \"messaggio\"\nmsg.payload = msg.payload.messaggio;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 460,
+        "wires": [
+            [
+                "d25f2422ff32041b",
+                "3b8cba96de02b6c1"
+            ]
+        ]
+    },
+    {
+        "id": "3b8cba96de02b6c1",
+        "type": "debug",
+        "z": "735c512bb2eabce7",
+        "name": "debug 3",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 400,
+        "y": 580,
+        "wires": []
+    }
+]

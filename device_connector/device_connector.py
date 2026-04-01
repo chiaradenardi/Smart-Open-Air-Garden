@@ -9,7 +9,7 @@ import paho.mqtt.client as mqtt
 
 # --- CONFIGURATION FOR DOCKER VARIABLES ---
 ### NEED TO SET WITH CORRECT URL OF CATALOG (IF NOT USING DOCKER, DEFAULT IS LOCALHOST)
-CATALOG_URL = os.getenv("CATALOG_URL", "http://127.0.0.1:8080/device_config")
+CATALOG_URL = os.getenv("CATALOG_URL", "http://service-catalog:8080/broker")
 
 # Global variable for state of simulated pump
 pump_state = "OFF"  # Variabile globale che simula lo stato del nostro attuatore fisico
@@ -78,7 +78,9 @@ if __name__ == "__main__":
 
      #extracting necessary info from the json received from the Catalog
      ### INSERT CORRECT KEYS       
-    broker_ip = broker_config.get("broker_ip", "localhost")
+    device_id = os.getenv("DEVICE_ID", "RPi_001")
+    # In device_connector.py, modifica queste righe nel main:
+    broker_ip = broker_config.get("broker_name", "message-broker") # Usa broker_name, non broker_ip
     telemetry_topic = broker_config.get("telemetry_topic", "garden/sensors/telemetry")
     command_topic = broker_config.get("command_topic", "garden/actuators/pump")
     

@@ -14,8 +14,9 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 # IP del Message Broker e del microservizio che riceve la configurazione (es. Smart Irrigation Strategy)
-BROKER_IP = "127.0.0.1" # Cambia con l'IP reale
-STRATEGY_REST_URL = "http://<IP_STRATEGY>:8080/api/set_crop"
+# Read from environment variable set in docker-compose.yml
+BROKER_IP = os.getenv("BROKER_IP", "message-broker")
+STRATEGY_REST_URL = os.getenv('SLOTS_URL', 'http://service-catalog:8080/slots')
 
 # Variabile per salvare l'ID della chat dell'utente (per potergli inviare i messaggi MQTT)
 user_chat_id = None 
@@ -61,30 +62,81 @@ def handle_start(message):
 @bot.message_handler(commands=['coltura'])
 def handle_coltura(message):
     # Creiamo una tastiera (Inline Keyboard) per far scegliere la coltura
+    # STEP 1: Chiedi quale slot aggiornare
     markup = telebot.types.InlineKeyboardMarkup()
-    btn_pomodori = telebot.types.InlineKeyboardButton("🍅 Pomodori", callback_data="crop_pomodori")
-    btn_basilico = telebot.types.InlineKeyboardButton("🌿 Basilico", callback_data="crop_basilico")
+    btn_s1 = telebot.types.InlineKeyboardButton("🌱 Orto Nord (S1)", callback_data="slot_S1")
+    btn_s2 = telebot.types.InlineKeyboardButton("🌿 Balcone Sud (S2)", callback_data="slot_S2")
+    markup.add(btn_s1)
+    markup.add(btn_s2)
+    
+    bot.send_message(message.chat.id, "Quale slot vuoi aggiornare?", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("slot_"))
+def handle_slot_selection(call):
+    # Estrai lo slot selezionato (S1, S2, ecc.)
+    selected_slot = call.data.split("_")[1]
+    
+    # STEP 2: Chiedi quale pianta assegnare
+    markup = telebot.types.InlineKeyboardMarkup()
+    btn_pomodori = telebot.types.InlineKeyboardButton("🍅 Pomodori", callback_data=f"plant_pomodori_{selected_slot}")
+    btn_basilico = telebot.types.InlineKeyboardButton("🌿 Basilico", callback_data=f"plant_basilico_{selected_slot}")
     markup.add(btn_pomodori, btn_basilico)
     
-    bot.send_message(message.chat.id, "Quale coltura vuoi piantare?", reply_markup=markup)
+    bot.send_message(call.message.chat.id, f"Quale coltura per {selected_slot}?", reply_markup=markup)    
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("crop_"))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("plant_"))
 def handle_crop_selection(call):
-    """Gestisce il click sui bottoni della coltura ed effettua la chiamata REST"""
-    coltura_scelta = call.data.split("_")[1] # Estrae 'pomodori' o 'basilico'
+   # Estrai la pianta e lo slot selezionati
+    parts = call.data.split("_")
+    coltura_scelta = parts[1]      # "pomodori" o "basilico"
+    selected_slot = parts[2]        # "S1", "S2", ecc. 
+    
+    # Mappiamo la scelta dell'utente con gli ID presenti nel tuo catalogManager.json
+    plant_map = {"pomodori": "P1", "basilico": "P2"}
+    plant_id = plant_map.get(coltura_scelta)
     
     bot.answer_callback_query(call.id, f"Hai scelto {coltura_scelta}!")
-    bot.edit_message_text(f"⏳ Inviando la configurazione per *{coltura_scelta}* al sistema...", call.message.chat.id, call.message.message_id, parse_mode="Markdown")
     
-    # --- CHIAMATA REST (Come richiesto dal revisore) ---
     try:
-        payload = {"selected_crop": coltura_scelta}
-        response = requests.post(STRATEGY_REST_URL, json=payload, timeout=5)
-        response.raise_for_status()
+        # IMPORTANTE: Il catalogo usa PUT per aggiornare e vuole slotID e plantID
+        payload = {
+            "slotID": selected_slot,        # Usiamo lo slot selezionato
+            "plantID": plant_id    # P1 o P2
+        }
+        # Cambiato da POST a PUT come richiesto dal tuo SlotsEndpoint.PUT
+        response_put = requests.put(STRATEGY_REST_URL, json=payload, timeout=5)
+        response_put.raise_for_status()
+
+        # --- FASE 2: CHIEDIAMO LO STATO AGGIORNATO DI TUTTO IL GIARDINO (GET) ---
+        response_get = requests.get(STRATEGY_REST_URL, timeout=5)
+        response_get.raise_for_status()
+        slots_data = response_get.json()
         
-        bot.send_message(call.message.chat.id, f"✅ Configurazione aggiornata con successo! Il sistema ora ottimizzerà l'irrigazione per: {coltura_scelta}.")
-    except requests.exceptions.RequestException as e:
-        bot.send_message(call.message.chat.id, f"❌ Errore di comunicazione col server. Impossibile impostare la coltura.\nDettaglio: {e}")
+        # --- FASE 3: COSTRUIAMO IL MESSAGGIO DI RIEPILOGO ---
+        nomi_piante = {"P1": "pomodori", "P2": "basilico"}
+        conteggio = {"pomodori": 0, "basilico": 0}
+        dettaglio_slot = []
+
+        # Analizziamo ogni slot ricevuto dal Catalogo
+        for slot in slots_data:
+            id_slot = slot.get("slotID")
+            id_pianta = slot.get("plantID")
+            nome_pianta = nomi_piante.get(id_pianta, "pianta sconosciuta")
+            
+            # Aggiungiamo la frase per il singolo slot
+            dettaglio_slot.append(f"nello slot {id_slot} hai {nome_pianta}")
+            
+            # Aggiorniamo i contatori totali
+            if nome_pianta in conteggio:
+                conteggio[nome_pianta] += 1
+        
+        # Assembliamo la frase finale
+        frase_slot = ", ".join(dettaglio_slot)
+        testo_finale = f"✅ Configurazione aggiornata!\n\n{frase_slot.capitalize()}.\nIn totale hai {conteggio['pomodori']} piante di pomodori e {conteggio['basilico']} piante di basilico."
+        
+        bot.send_message(call.message.chat.id, testo_finale)
+    except Exception as e:
+        bot.send_message(call.message.chat.id, f"❌ Errore: {e}")
 
 # --- AVVIO DEL SISTEMA ---
 if __name__ == "__main__":
