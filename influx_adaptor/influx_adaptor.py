@@ -13,9 +13,9 @@ class InfluxDBAdaptor:
         self.catalog_url = catalog_url
         
         # --- DATI INFLUXDB (Hardcoded per ora, in futuro potresti prenderli dal Catalogo) ---
-        self.influx_url = "http://influxdb:8086"
-        self.influx_token = "dOzXCt01RpXm58Zh_Twn57mRkeRttHvtmbJi6FdPdM0kJh4D-7t2ldF2Ni8YeUg8QCXCqShqC6xMn8IViISstA==" # Quello che hai messo nel docker-compose
-        self.influx_org = "SmartGarden"
+        self.influx_url = "https://us-east-1-1.aws.cloud2.influxdata.com"
+        self.influx_token = "u66UJ0P2mY0WxolaK1-dqhn6Kl70Q1LDuMcsL_28Jej0FnUoiH31VHzpz6O73Z2gNqfakdWYPhOoSd1aVNKdAA==" # Quello che hai messo nel docker-compose
+        self.influx_org = "e5fa79d45d607722"
         self.influx_bucket = "telemetry_data"
         
         # Inizializza il client di InfluxDB
@@ -166,7 +166,7 @@ class InfluxRESTService:
             """
         try:
             # 3. Esegui la query
-            tabelle_risultato = self.db_client.query_api().query(org="SmartGarden", query=query)
+            tabelle_risultato = self.db_client.query_api().query(org="e5fa79d45d607722", query=query)
             
             # --- 4. TRASFORMAZIONE IN JSON ---
             lista_dati = []
