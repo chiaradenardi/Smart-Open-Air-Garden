@@ -106,5 +106,6 @@ services:
     environment:
       - INFLUX_ADAPTOR_URL=http://influx-adaptor:8081
     depends_on:
-      - influx-adaptor  # Quando Natalia sarà pronta
+      - influxdb  
+      - influx-adaptor
     restart: always
