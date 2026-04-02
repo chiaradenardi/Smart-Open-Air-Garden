@@ -177,7 +177,7 @@
         {
             "slotID": "S2",
             "slotName": "Balcone Sud",
-            "plantID": "P2",
+            "plantID": "P1",
             "deviceID": "RPi_002",
             "status": "active"
         }
