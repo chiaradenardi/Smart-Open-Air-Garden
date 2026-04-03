@@ -1,11 +1,39 @@
 [
     {
-        "id": "735c512bb2eabce7",
+        "id": "e416cf0bed26c885",
         "type": "tab",
         "label": "Flow 1",
         "disabled": false,
         "info": "",
         "env": []
+    },
+    {
+        "id": "968f1cab134c7246",
+        "type": "mqtt-broker",
+        "name": "🔌 Mosquitto (Docker)",
+        "broker": "message-broker",
+        "port": 1883,
+        "clientid": "node-red-dashboard",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "userProps": "",
+        "sessionExpiry": ""
     },
     {
         "id": "88b2615dfaca0852",
@@ -28,48 +56,51 @@
         "allowInstall": false
     },
     {
-        "id": "73b5b38472d99d98",
+        "id": "main-theme",
         "type": "ui-theme",
-        "name": "Default Theme",
+        "name": "Garden Theme",
         "colors": {
             "surface": "#ffffff",
-            "primary": "#0094CE",
-            "bgPage": "#eeeeee",
+            "primary": "#2ca02c",
+            "bgPage": "#f5f5f5",
             "groupBg": "#ffffff",
-            "groupOutline": "#cccccc"
+            "groupOutline": "#d4d4d4"
         },
         "sizes": {
             "density": "default",
-            "pagePadding": "12px",
+            "pagePadding": "16px",
             "groupGap": "12px",
-            "groupBorderRadius": "4px",
+            "groupBorderRadius": "8px",
             "widgetGap": "12px"
         }
     },
     {
-        "id": "aa2caa278bc9b504",
+        "id": "6ec353aae6a64e2c",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "@flowfuse/node-red-dashboard": "1.30.2"
+        }
+    },
+    {
+        "id": "main-page",
         "type": "ui-page",
-        "name": "My Garden",
+        "name": "🌳 Smart Garden Dashboard",
         "ui": "88b2615dfaca0852",
-        "path": "/page1",
-        "icon": "home",
+        "path": "/dashboard",
+        "icon": "leaf",
         "layout": "grid",
-        "theme": "73b5b38472d99d98",
+        "theme": "main-theme",
         "breakpoints": [
             {
                 "name": "Default",
                 "px": "0",
-                "cols": "3"
+                "cols": "12"
             },
             {
                 "name": "Tablet",
                 "px": "576",
-                "cols": "6"
-            },
-            {
-                "name": "Small Desktop",
-                "px": "768",
-                "cols": "9"
+                "cols": "12"
             },
             {
                 "name": "Desktop",
@@ -83,278 +114,63 @@
         "disabled": "false"
     },
     {
-        "id": "713e0f73821a9161",
+        "id": "fault-group",
         "type": "ui-group",
-        "name": "Real Time Sensors",
-        "page": "aa2caa278bc9b504",
-        "width": 6,
+        "name": "🚨 Fault Detection Alerts",
+        "page": "main-page",
+        "width": 12,
+        "height": 1,
+        "order": 3,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "crop-group",
+        "type": "ui-group",
+        "name": "🌾 Crop Configuration",
+        "page": "main-page",
+        "width": 12,
+        "height": 1,
+        "order": 4,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "real-time-group",
+        "type": "ui-group",
+        "name": "🌱 Real-Time Sensors",
+        "page": "main-page",
+        "width": 12,
+        "height": 1,
+        "order": 1,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "statistics-group",
+        "type": "ui-group",
+        "name": "💧 Water Savings Statistics",
+        "page": "main-page",
+        "width": 12,
         "height": 1,
         "order": 2,
         "showTitle": true,
         "className": "",
         "visible": "true",
-        "disabled": "false",
-        "groupType": "default"
+        "disabled": "false"
     },
     {
-        "id": "b2ab00554b448083",
-        "type": "ui-group",
-        "name": "Statistics",
-        "page": "aa2caa278bc9b504",
-        "width": 6,
-        "height": 1,
-        "order": 1,
-        "showTitle": true,
-        "className": "",
-        "visible": "true",
-        "disabled": "false",
-        "groupType": "default"
-    },
-    {
-        "id": "968f1cab134c7246",
-        "type": "mqtt-broker",
-        "name": "",
-        "broker": "localhost",
-        "port": 1883,
-        "clientid": "",
-        "autoConnect": true,
-        "usetls": false,
-        "protocolVersion": 4,
-        "keepalive": 60,
-        "cleansession": true,
-        "autoUnsubscribe": true,
-        "birthTopic": "",
-        "birthQos": "0",
-        "birthRetain": "false",
-        "birthPayload": "",
-        "birthMsg": {},
-        "closeTopic": "",
-        "closeQos": "0",
-        "closeRetain": "false",
-        "closePayload": "",
-        "closeMsg": {},
-        "willTopic": "",
-        "willQos": "0",
-        "willRetain": "false",
-        "willPayload": "",
-        "willMsg": {},
-        "userProps": "",
-        "sessionExpiry": ""
-    },
-    {
-        "id": "913ea94b7f3f4398",
-        "type": "function",
-        "z": "735c512bb2eabce7",
-        "name": "function 2",
-        "func": "var datiStoriciFinti = [\n    {\"time\": \"2026-03-13T19:00:00Z\", \"value\": 35.0},\n    {\"time\": \"2026-03-13T19:15:00Z\", \"value\": 38.5},\n    {\"time\": \"2026-03-13T19:30:00Z\", \"value\": 42.0},\n    {\"time\": \"2026-03-13T19:50:00Z\", \"value\": 45.2}\n];\n\nvar messaggi = [];\nfor (var i = 0; i < datiStoriciFinti.length; i++) {\n    messaggi.push({\n        payload: datiStoriciFinti[i].value,         \n        topic: \"soil_moisture\",          \n        timestamp: new Date(datiStoriciFinti[i].time).getTime() \n    });\n}\nreturn [messaggi];",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 280,
-        "y": 280,
-        "wires": [
-            [
-                "fbe2a3f3e6a5914c",
-                "83b86a3c170dc7be"
-            ]
-        ]
-    },
-    {
-        "id": "b136585b2891a82b",
-        "type": "debug",
-        "z": "735c512bb2eabce7",
-        "name": "debug 1",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "false",
-        "statusVal": "",
-        "statusType": "auto",
-        "x": 480,
-        "y": 40,
-        "wires": []
-    },
-    {
-        "id": "fbe2a3f3e6a5914c",
-        "type": "debug",
-        "z": "735c512bb2eabce7",
-        "name": "debug 2",
-        "active": false,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "false",
-        "statusVal": "",
-        "statusType": "auto",
-        "x": 320,
-        "y": 380,
-        "wires": []
-    },
-    {
-        "id": "f43d93327c1b0fad",
-        "type": "ui-button",
-        "z": "735c512bb2eabce7",
-        "group": "b2ab00554b448083",
-        "name": "Upload Storics",
-        "label": "button",
-        "order": 0,
-        "width": 0,
-        "height": 0,
-        "emulateClick": false,
-        "tooltip": "",
-        "color": "",
-        "bgcolor": "",
-        "className": "",
-        "icon": "",
-        "iconPosition": "left",
-        "payload": "",
-        "payloadType": "str",
-        "topic": "topic",
-        "topicType": "msg",
-        "buttonColor": "",
-        "textColor": "",
-        "iconColor": "",
-        "enableClick": true,
-        "enablePointerdown": false,
-        "pointerdownPayload": "",
-        "pointerdownPayloadType": "str",
-        "enablePointerup": false,
-        "pointerupPayload": "",
-        "pointerupPayloadType": "str",
-        "x": 105,
-        "y": 276.11109924316406,
-        "wires": [
-            [
-                "913ea94b7f3f4398"
-            ]
-        ]
-    },
-    {
-        "id": "83b86a3c170dc7be",
-        "type": "ui-chart",
-        "z": "735c512bb2eabce7",
-        "group": "b2ab00554b448083",
-        "name": "dataStoric",
-        "label": "chart",
-        "order": 1,
-        "chartType": "line",
-        "category": "topic",
-        "categoryType": "msg",
-        "xAxisLabel": "",
-        "xAxisProperty": "",
-        "xAxisPropertyType": "timestamp",
-        "xAxisType": "time",
-        "xAxisFormat": "",
-        "xAxisFormatType": "auto",
-        "xmin": "",
-        "xmax": "",
-        "yAxisLabel": "",
-        "yAxisProperty": "payload",
-        "yAxisPropertyType": "msg",
-        "ymin": "",
-        "ymax": "",
-        "bins": 10,
-        "action": "append",
-        "stackSeries": false,
-        "pointShape": "circle",
-        "pointRadius": 4,
-        "showLegend": true,
-        "removeOlder": 1,
-        "removeOlderUnit": "3600",
-        "removeOlderPoints": "",
-        "colors": [
-            "#0095ff",
-            "#ff0000",
-            "#ff7f0e",
-            "#2ca02c",
-            "#a347e1",
-            "#d62728",
-            "#ff9896",
-            "#9467bd",
-            "#c5b0d5"
-        ],
-        "textColor": [
-            "#666666"
-        ],
-        "textColorDefault": true,
-        "gridColor": [
-            "#e5e5e5"
-        ],
-        "gridColorDefault": true,
-        "width": 6,
-        "height": 8,
-        "className": "",
-        "interpolation": "linear",
-        "x": 445,
-        "y": 276.11109924316406,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "0c645f0db8147e69",
-        "type": "ui-gauge",
-        "z": "735c512bb2eabce7",
-        "name": "humidityRT",
-        "group": "713e0f73821a9161",
-        "order": 1,
-        "value": "payload",
-        "valueType": "msg",
-        "width": 3,
-        "height": 3,
-        "gtype": "gauge-half",
-        "gstyle": "needle",
-        "title": "humidityRT",
-        "alwaysShowTitle": false,
-        "floatingTitlePosition": "top-left",
-        "units": "units",
-        "icon": "",
-        "prefix": "",
-        "suffix": "",
-        "segments": [
-            {
-                "from": "0",
-                "color": "#5cd65c",
-                "text": "",
-                "textType": "label"
-            },
-            {
-                "from": "4",
-                "color": "#ffc800",
-                "text": "",
-                "textType": "label"
-            },
-            {
-                "from": "7",
-                "color": "#ea5353",
-                "text": "",
-                "textType": "label"
-            }
-        ],
-        "min": "10",
-        "max": "100",
-        "sizeThickness": 16,
-        "sizeGap": 4,
-        "sizeKeyThickness": 8,
-        "styleRounded": true,
-        "styleGlow": false,
-        "className": "",
-        "x": 610,
-        "y": 120,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "7e29f6b9e7ba1fc3",
+        "id": "4edfc2acea62912d",
         "type": "mqtt in",
-        "z": "735c512bb2eabce7",
-        "name": "",
-        "topic": "garden/+/telemetry",
+        "z": "e416cf0bed26c885",
+        "name": "🌱 Real-time Sensors (MQTT)",
+        "topic": "garden/sensors/telemetry",
         "qos": "2",
         "datatype": "auto-detect",
         "broker": "968f1cab134c7246",
@@ -362,60 +178,89 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 130,
-        "y": 140,
+        "x": 1290,
+        "y": 620,
         "wires": [
             [
-                "80ab69de0eadd63e"
+                "3a5627528a9605b3"
             ]
         ]
     },
     {
-        "id": "80ab69de0eadd63e",
-        "type": "json",
-        "z": "735c512bb2eabce7",
-        "name": "",
-        "property": "payload",
-        "action": "",
-        "pretty": false,
-        "x": 290,
-        "y": 140,
-        "wires": [
-            [
-                "3908f7dfebde91dc"
-            ]
-        ]
-    },
-    {
-        "id": "3908f7dfebde91dc",
+        "id": "3a5627528a9605b3",
         "type": "function",
-        "z": "735c512bb2eabce7",
-        "name": "function 1",
-        "func": "// Il payload in arrivo è la lista (array) di sensori SenML\nvar sensori = msg.payload;\n\n// Prepariamo due messaggi vuoti\nvar msgUmidita = null;\nvar msgTemperatura = null;\n\n// Controlliamo che i dati siano effettivamente una lista\nif (Array.isArray(sensori)) {\n    // Passiamo in rassegna ogni elemento della lista\n    for (var i = 0; i < sensori.length; i++) {\n        var dato = sensori[i];\n\n        // Se l'elemento (n) si chiama umidità del suolo...\n        if (dato.n === \"soil_moisture\") {\n            // ...estraiamo il valore (v) e prepariamo il messaggio\n            msgUmidita = { payload: dato.v };\n        }\n        // Se invece si chiama temperatura...\n        else if (dato.n === \"temperature\") {\n            // ...estraiamo il suo valore\n            msgTemperatura = { payload: dato.v };\n        }\n    }\n}\n\n// Restituiamo i due messaggi separati. \n// Il primo andrà all'uscita 1 (in alto), il secondo all'uscita 2 (in basso).\nreturn [msgUmidita, msgTemperatura];",
-        "outputs": 2,
+        "z": "e416cf0bed26c885",
+        "name": "🔄 Split Sensors",
+        "func": "// Gestisce ENTRAMBI i formati: SenML e flat JSON\nvar sensori = msg.payload;\nvar msgUmidita = null;\nvar msgTemperatura = null;\nvar msgPompa = null;\n\n// Se è un array SenML\nif (Array.isArray(sensori)) {\n    for (var i = 0; i < sensori.length; i++) {        \n        var dato = sensori[i];\n        \n        if (dato.n === \"soil_moisture\") {\n            msgUmidita = { payload: parseFloat(dato.v) || 0, topic: \"soil_moisture\" };\n        }\n        else if (dato.n === \"temperature\") {\n            msgTemperatura = { payload: parseFloat(dato.v) || 0, topic: \"temperature\" };\n        }\n        else if (dato.n === \"pump_status\") {\n            msgPompa = { payload: parseFloat(dato.v) || 0, topic: \"pump_status\" };\n        }\n    }\n}\n// Se è un oggetto flat (come quello di device_connector)\nelse if (typeof sensori === 'object') {\n    msgTemperatura = { payload: parseFloat(sensori.temperature) || 0, topic: \"temperature\" };\n    msgUmidita = { payload: parseFloat(sensori.soil_moisture) || 0, topic: \"soil_moisture\" };\n    if (sensori.pump_status) {\n        msgPompa = { payload: parseFloat(sensori.pump_status) || 0, topic: \"pump_status\" };\n    }\n}\n\nreturn [msgUmidita, msgTemperatura, msgPompa];",
+        "outputs": 3,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 420,
-        "y": 140,
+        "x": 1580,
+        "y": 620,
         "wires": [
             [
-                "b136585b2891a82b",
-                "0c645f0db8147e69"
+                "ddbb23f24a5436c6",
+                "16e293333cd5dfb8",
+                "dddb210baaaacbeb"
             ],
             [
-                "47aaad8b5b3807d3"
+                "02ed0ecf9813ccea"
+            ],
+            [
+                "d021e0aa87dacd3d"
             ]
         ]
     },
     {
-        "id": "47aaad8b5b3807d3",
+        "id": "ddbb23f24a5436c6",
         "type": "ui-gauge",
-        "z": "735c512bb2eabce7",
-        "name": "temperatureRT",
-        "group": "713e0f73821a9161",
+        "z": "e416cf0bed26c885",
+        "name": "💧 Humidity RT",
+        "group": "real-time-group",
+        "order": 1,
+        "value": "payload",
+        "valueType": "msg",
+        "width": 3,
+        "height": 3,
+        "gtype": "gauge-half",
+        "gstyle": "needle",
+        "title": "Soil Moisture",
+        "alwaysShowTitle": true,
+        "units": "%",
+        "icon": "droplet",
+        "prefix": "",
+        "suffix": "%",
+        "segments": [
+            {
+                "from": "0",
+                "color": "#0095ff",
+                "text": "",
+                "textType": "label"
+            }
+        ],
+        "min": 0,
+        "max": 100,
+        "sizeThickness": 16,
+        "sizeGap": 4,
+        "sizeKeyThickness": "",
+        "styleRounded": true,
+        "styleGlow": true,
+        "className": "",
+        "x": 1860,
+        "y": 580,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "02ed0ecf9813ccea",
+        "type": "ui-gauge",
+        "z": "e416cf0bed26c885",
+        "name": "🌡️ Temperature RT",
+        "group": "real-time-group",
         "order": 0,
         "value": "payload",
         "valueType": "msg",
@@ -423,105 +268,180 @@
         "height": 3,
         "gtype": "gauge-half",
         "gstyle": "needle",
-        "title": "temperatureRT",
-        "alwaysShowTitle": false,
-        "floatingTitlePosition": "top-left",
-        "units": "units",
-        "icon": "",
+        "title": "Temperature",
+        "alwaysShowTitle": true,
+        "units": "°C",
+        "icon": "thermometer",
         "prefix": "",
-        "suffix": "",
+        "suffix": "°C",
         "segments": [
             {
                 "from": "0",
-                "color": "#5cd65c",
-                "text": "",
-                "textType": "label"
-            },
-            {
-                "from": "4",
-                "color": "#ffc800",
-                "text": "",
-                "textType": "label"
-            },
-            {
-                "from": "7",
-                "color": "#ea5353",
+                "color": "#ff7f0e",
                 "text": "",
                 "textType": "label"
             }
         ],
         "min": 0,
-        "max": 10,
+        "max": 40,
         "sizeThickness": 16,
         "sizeGap": 4,
-        "sizeKeyThickness": 8,
+        "sizeKeyThickness": "",
         "styleRounded": true,
-        "styleGlow": false,
+        "styleGlow": true,
         "className": "",
-        "x": 600,
-        "y": 160,
+        "x": 1880,
+        "y": 660,
         "wires": [
             []
         ]
     },
     {
-        "id": "008b8a60c5397371",
-        "type": "inject",
-        "z": "735c512bb2eabce7",
-        "name": "",
-        "props": [
-            {
-                "p": "payload"
-            },
-            {
-                "p": "topic",
-                "vt": "str"
-            }
+        "id": "d021e0aa87dacd3d",
+        "type": "ui-chart",
+        "z": "e416cf0bed26c885",
+        "group": "real-time-group",
+        "name": "💧 Pump Status",
+        "label": "Pump Activity",
+        "order": 5,
+        "chartType": "bar",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "Time",
+        "xAxisType": "time",
+        "yAxisLabel": "Status",
+        "yAxisProperty": "payload",
+        "yAxisPropertyType": "msg",
+        "action": "append",
+        "pointRadius": 2,
+        "showLegend": true,
+        "removeOlder": 1,
+        "removeOlderUnit": "3600",
+        "colors": [
+            "#2ca02c"
         ],
-        "repeat": "",
-        "crontab": "",
-        "once": false,
-        "onceDelay": 0.1,
-        "topic": "",
-        "payload": "[{\"bn\":\"RPi_001/\",\"n\":\"temperature\",\"v\":23.5,\"u\":\"Cel\",\"t\":1773413500},{\"n\":\"soil_moisture\",\"v\":45.2,\"u\":\"%RH\",\"t\":1773413500}]",
-        "payloadType": "json",
-        "x": 270,
-        "y": 40,
+        "width": 6,
+        "height": 4,
+        "x": 1860,
+        "y": 700,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "16e293333cd5dfb8",
+        "type": "ui-chart",
+        "z": "e416cf0bed26c885",
+        "group": "real-time-group",
+        "name": "📈 Humidity Timeline",
+        "label": "Soil Moisture (RT)",
+        "order": 3,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "Time",
+        "xAxisPropertyType": "timestamp",
+        "xAxisType": "time",
+        "xAxisFormat": "HH:mm:ss",
+        "yAxisLabel": "%",
+        "yAxisProperty": "payload",
+        "yAxisPropertyType": "msg",
+        "ymin": 0,
+        "ymax": 100,
+        "action": "append",
+        "pointShape": "circle",
+        "pointRadius": 2,
+        "showLegend": true,
+        "removeOlder": 1,
+        "removeOlderUnit": "3600",
+        "colors": [
+            "#0095ff"
+        ],
+        "width": 6,
+        "height": 4,
+        "x": 1840,
+        "y": 540,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "dddb210baaaacbeb",
+        "type": "ui-chart",
+        "z": "e416cf0bed26c885",
+        "group": "real-time-group",
+        "name": "📈 Temperature Timeline",
+        "label": "Temperature (RT)",
+        "order": 4,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "Time",
+        "xAxisPropertyType": "timestamp",
+        "xAxisType": "time",
+        "xAxisFormat": "HH:mm:ss",
+        "yAxisLabel": "°C",
+        "yAxisProperty": "payload",
+        "yAxisPropertyType": "msg",
+        "ymin": 0,
+        "ymax": 40,
+        "action": "append",
+        "pointShape": "circle",
+        "pointRadius": 2,
+        "showLegend": true,
+        "removeOlder": 1,
+        "removeOlderUnit": "3600",
+        "colors": [
+            "#ff7f0e"
+        ],
+        "width": 6,
+        "height": 4,
+        "x": 1890,
+        "y": 620,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ae826dd410919705",
+        "type": "ui-button",
+        "z": "e416cf0bed26c885",
+        "group": "statistics-group",
+        "name": "🔄 Calculate Water Stats",
+        "label": "Get Statistics",
+        "order": 0,
+        "width": 3,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "Fetch water savings from statistics-service",
+        "color": "",
+        "bgcolor": "#0095ff",
+        "className": "",
+        "icon": "refresh",
+        "iconPosition": "left",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "textColor": "#ffffff",
+        "enableClick": true,
+        "x": 1110,
+        "y": 940,
         "wires": [
             [
-                "3908f7dfebde91dc"
+                "4c23f8063a43ed78"
             ]
         ]
     },
     {
-        "id": "d70e4252708f8899",
-        "type": "comment",
-        "z": "735c512bb2eabce7",
-        "name": "",
-        "info": "connecting nodered with mqtt in rt",
-        "x": 60,
-        "y": 40,
-        "wires": []
-    },
-    {
-        "id": "cb2f3eb7fbb80fda",
-        "type": "comment",
-        "z": "735c512bb2eabce7",
-        "name": "",
-        "info": "statistiche sui dati raccolti",
-        "x": 100,
-        "y": 220,
-        "wires": []
-    },
-    {
-        "id": "5bfe9f536b8a9d55",
+        "id": "4c23f8063a43ed78",
         "type": "http request",
-        "z": "735c512bb2eabce7",
-        "name": "",
+        "z": "e416cf0bed26c885",
+        "name": "📡 REST: statistics-service",
         "method": "GET",
         "ret": "obj",
         "paytoqs": "ignore",
-        "url": "http://host.docker.internal:5000/api/water-saved",
+        "url": "http://statistics-service:8082/api/water-saved?period=7d",
         "tls": "",
         "persist": false,
         "proxy": "",
@@ -529,122 +449,444 @@
         "authType": "",
         "senderr": false,
         "headers": [],
-        "x": 270,
-        "y": 460,
+        "x": 1390,
+        "y": 940,
         "wires": [
             [
-                "3a56cb622af6a191"
+                "c23b2fea22cb62a8"
             ]
         ]
     },
     {
-        "id": "926d5a1a5b3d371a",
-        "type": "ui-button",
-        "z": "735c512bb2eabce7",
-        "group": "b2ab00554b448083",
-        "name": "efficiency-calculus",
-        "label": "EffButton",
-        "order": 0,
-        "width": 0,
-        "height": 0,
-        "emulateClick": false,
-        "tooltip": "",
-        "color": "",
-        "bgcolor": "",
-        "className": "",
-        "icon": "",
-        "iconPosition": "left",
-        "payload": "",
-        "payloadType": "str",
-        "topic": "topic",
-        "topicType": "msg",
-        "buttonColor": "",
-        "textColor": "",
-        "iconColor": "",
-        "enableClick": true,
-        "enablePointerdown": false,
-        "pointerdownPayload": "",
-        "pointerdownPayloadType": "str",
-        "enablePointerup": false,
-        "pointerupPayload": "",
-        "pointerupPayloadType": "str",
-        "x": 90,
-        "y": 460,
-        "wires": [
-            [
-                "5bfe9f536b8a9d55"
-            ]
-        ]
-    },
-    {
-        "id": "b7df4f5a42c06cc3",
-        "type": "comment",
-        "z": "735c512bb2eabce7",
-        "name": "",
-        "info": "quanta acqua salvata",
-        "x": 100,
-        "y": 400,
-        "wires": []
-    },
-    {
-        "id": "d25f2422ff32041b",
-        "type": "ui-text",
-        "z": "735c512bb2eabce7",
-        "group": "b2ab00554b448083",
-        "order": 0,
-        "width": 0,
-        "height": 0,
-        "name": "ReportEfficiency",
-        "label": "text",
-        "format": "{{msg.payload}}",
-        "layout": "row-spread",
-        "style": false,
-        "font": "",
-        "fontSize": 16,
-        "color": "#717171",
-        "wrapText": false,
-        "className": "",
-        "value": "payload",
-        "valueType": "msg",
-        "x": 580,
-        "y": 460,
-        "wires": []
-    },
-    {
-        "id": "3a56cb622af6a191",
+        "id": "c23b2fea22cb62a8",
         "type": "function",
-        "z": "735c512bb2eabce7",
-        "name": "function 3",
-        "func": "// Prendo tutto il pacchetto JSON e isolo solo la riga \"messaggio\"\nmsg.payload = msg.payload.messaggio;\nreturn msg;",
+        "z": "e416cf0bed26c885",
+        "name": "🎯 Extract Statistics",
+        "func": "if (msg.payload && msg.payload.statistics) {\n    var stats = msg.payload.statistics;\n    msg.payload = {\n        liters_saved: stats.liters_saved,\n        savings_percentage: stats.savings_percentage,\n        pump_activations: stats.pump_activations_smart,\n        liters_smart: stats.liters_used_smart,\n        liters_fixed: stats.liters_fixed_timer,\n        minutes_smart: stats.minutes_used_smart,\n        minutes_fixed: stats.minutes_fixed_timer,\n        timestamp: new Date().toLocaleString('it-IT')\n    };\n}\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 420,
-        "y": 460,
+        "x": 1640,
+        "y": 940,
         "wires": [
             [
-                "d25f2422ff32041b",
-                "3b8cba96de02b6c1"
+                "d8a0b9dbf825565c",
+                "0f0517e98a438eb8",
+                "e6e7cc09bf4a026c",
+                "983859efb7d9b7f0"
             ]
         ]
     },
     {
-        "id": "3b8cba96de02b6c1",
+        "id": "0f0517e98a438eb8",
+        "type": "ui-gauge",
+        "z": "e416cf0bed26c885",
+        "name": "💾 Water Saved",
+        "group": "statistics-group",
+        "order": 1,
+        "value": "payload.liters_saved",
+        "valueType": "msg",
+        "width": 3,
+        "height": 3,
+        "gtype": "gauge",
+        "gstyle": "needle",
+        "title": "Liters Saved",
+        "alwaysShowTitle": true,
+        "units": "L",
+        "icon": "tint",
+        "prefix": "",
+        "suffix": " L",
+        "segments": [
+            {
+                "from": "0",
+                "color": "#2ca02c",
+                "text": "",
+                "textType": "label"
+            }
+        ],
+        "min": 0,
+        "max": 300,
+        "sizeThickness": 16,
+        "sizeGap": 4,
+        "sizeKeyThickness": "",
+        "styleRounded": true,
+        "styleGlow": true,
+        "className": "",
+        "x": 1910,
+        "y": 840,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "d8a0b9dbf825565c",
+        "type": "ui-text",
+        "z": "e416cf0bed26c885",
+        "group": "statistics-group",
+        "order": 0,
+        "width": 6,
+        "height": 2,
+        "name": "📊 Full Report",
+        "label": "Statistics Report",
+        "format": "{{msg.payload.savings_percentage}}% Risparmio | {{msg.payload.liters_saved}}L Salvati | {{msg.payload.pump_activations}} Accensioni | 🕐 {{msg.payload.timestamp}}",
+        "layout": "row-spread",
+        "style": true,
+        "font": "monospace",
+        "fontSize": 14,
+        "color": "#ffffff",
+        "wrapText": false,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1920,
+        "y": 980,
+        "wires": []
+    },
+    {
+        "id": "e6e7cc09bf4a026c",
+        "type": "ui-chart",
+        "z": "e416cf0bed26c885",
+        "group": "statistics-group",
+        "name": "📈 Water Savings Trend",
+        "label": "7-Day Water Savings",
+        "order": 2,
+        "chartType": "line",
+        "category": "payload.timestamp",
+        "categoryType": "msg",
+        "xAxisLabel": "Time",
+        "xAxisType": "category",
+        "yAxisLabel": "Liters",
+        "yAxisProperty": "payload.liters_saved",
+        "yAxisPropertyType": "msg",
+        "action": "append",
+        "pointShape": "circle",
+        "pointRadius": 4,
+        "showLegend": true,
+        "removeOlder": 1,
+        "removeOlderUnit": "3600",
+        "colors": [
+            "#2ca02c"
+        ],
+        "width": 6,
+        "height": 4,
+        "x": 1930,
+        "y": 1020,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a654f8ff99939e94",
+        "type": "inject",
+        "z": "e416cf0bed26c885",
+        "name": "⏰ Auto-refresh every 5 min",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "300",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "x": 1130,
+        "y": 1000,
+        "wires": [
+            [
+                "4c23f8063a43ed78"
+            ]
+        ]
+    },
+    {
+        "id": "983859efb7d9b7f0",
         "type": "debug",
-        "z": "735c512bb2eabce7",
-        "name": "debug 3",
+        "z": "e416cf0bed26c885",
+        "name": "🐛 Debug Statistics",
         "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
-        "complete": "false",
+        "complete": "true",
         "statusVal": "",
         "statusType": "auto",
-        "x": 400,
-        "y": 580,
+        "x": 1920,
+        "y": 920,
+        "wires": []
+    },
+    {
+        "id": "fault-mqtt-in-01",
+        "type": "mqtt in",
+        "z": "e416cf0bed26c885",
+        "name": "🚨 Fault Alerts (MQTT)",
+        "topic": "garden/+/alerts",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "968f1cab134c7246",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 1130,
+        "y": 1240,
+        "wires": [
+            [
+                "fault-json-parse-01"
+            ]
+        ]
+    },
+    {
+        "id": "fault-json-parse-01",
+        "type": "json",
+        "z": "e416cf0bed26c885",
+        "name": "Parse Alert",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 1350,
+        "y": 1240,
+        "wires": [
+            [
+                "fault-format-01"
+            ]
+        ]
+    },
+    {
+        "id": "fault-format-01",
+        "type": "function",
+        "z": "e416cf0bed26c885",
+        "name": "🔴 Format Alert",
+        "func": "var alert = msg.payload;\nvar alertText = '⚠️ FAULT DETECTED';\nif (alert && alert.message) { alertText = '🚨 ' + alert.message; }\nif (alert && alert.type) { alertText += ' [' + alert.type + ']'; }\nmsg.payload = { text: alertText, timestamp: new Date().toLocaleString('it-IT') };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1540,
+        "y": 1240,
+        "wires": [
+            [
+                "fault-text-display-01"
+            ]
+        ]
+    },
+    {
+        "id": "fault-text-display-01",
+        "type": "ui-text",
+        "z": "e416cf0bed26c885",
+        "group": "fault-group",
+        "order": 0,
+        "width": 6,
+        "height": 2,
+        "name": "🚨 Fault Alert Display",
+        "label": "Last Alert",
+        "format": "🕐 {{msg.payload.timestamp}} — {{msg.payload.text}}",
+        "layout": "row-spread",
+        "style": true,
+        "font": "monospace",
+        "fontSize": 14,
+        "color": "#ff4444",
+        "wrapText": true,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1760,
+        "y": 1240,
+        "wires": []
+    },
+    {
+        "id": "crop-dropdown-01",
+        "type": "ui-dropdown",
+        "z": "e416cf0bed26c885",
+        "group": "crop-group",
+        "name": "🌾 Crop Selector",
+        "label": "Select Crop Type",
+        "tooltip": "Choose the crop planted in your garden",
+        "order": 0,
+        "width": 4,
+        "height": 1,
+        "passthru": true,
+        "multiple": false,
+        "chips": false,
+        "options": [
+            {
+                "label": "🍅 Tomato",
+                "value": "tomato",
+                "type": "str"
+            },
+            {
+                "label": "🥬 Lettuce",
+                "value": "lettuce",
+                "type": "str"
+            },
+            {
+                "label": "🌿 Basil",
+                "value": "basil",
+                "type": "str"
+            },
+            {
+                "label": "🥕 Carrot",
+                "value": "carrot",
+                "type": "str"
+            },
+            {
+                "label": "🍓 Strawberry",
+                "value": "strawberry",
+                "type": "str"
+            }
+        ],
+        "topic": "crop_type",
+        "topicType": "str",
+        "className": "",
+        "x": 1130,
+        "y": 1440,
+        "wires": [
+            [
+                "crop-store-context-01"
+            ]
+        ]
+    },
+    {
+        "id": "crop-store-context-01",
+        "type": "function",
+        "z": "e416cf0bed26c885",
+        "name": "💾 Store crop",
+        "func": "flow.set('selectedCrop', msg.payload);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1340,
+        "y": 1440,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "crop-send-btn-01",
+        "type": "ui-button",
+        "z": "e416cf0bed26c885",
+        "group": "crop-group",
+        "name": "✅ Send Crop Config",
+        "label": "Apply Crop",
+        "order": 1,
+        "width": 3,
+        "height": 1,
+        "emulateClick": false,
+        "tooltip": "Send crop selection to Smart Irrigation Service via REST",
+        "color": "",
+        "bgcolor": "#2ca02c",
+        "className": "",
+        "icon": "leaf",
+        "iconPosition": "left",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "textColor": "#ffffff",
+        "enableClick": true,
+        "x": 1130,
+        "y": 1500,
+        "wires": [
+            [
+                "crop-build-payload-01"
+            ]
+        ]
+    },
+    {
+        "id": "crop-build-payload-01",
+        "type": "function",
+        "z": "e416cf0bed26c885",
+        "name": "📦 Build REST payload",
+        "func": "var crop = flow.get('selectedCrop') || 'tomato';\nmsg.payload = { crop_type: crop };\nmsg.headers = { 'Content-Type': 'application/json' };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1370,
+        "y": 1500,
+        "wires": [
+            [
+                "crop-rest-post-01"
+            ]
+        ]
+    },
+    {
+        "id": "crop-rest-post-01",
+        "type": "http request",
+        "z": "e416cf0bed26c885",
+        "name": "📡 REST POST: smart-irrigation-service",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://smart-irrigation-service:8083/api/crop",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1680,
+        "y": 1500,
+        "wires": [
+            [
+                "crop-response-01"
+            ]
+        ]
+    },
+    {
+        "id": "crop-response-01",
+        "type": "function",
+        "z": "e416cf0bed26c885",
+        "name": "✅ Handle Response",
+        "func": "var status = msg.statusCode;\nif (status === 200 || status === 201) {\n    msg.payload = '✅ Crop: ' + (msg.payload.crop_type || 'OK') + ' — ' + new Date().toLocaleString('it-IT');\n} else {\n    msg.payload = '❌ Errore ' + status + ': ' + JSON.stringify(msg.payload);\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1980,
+        "y": 1500,
+        "wires": [
+            [
+                "crop-status-text-01"
+            ]
+        ]
+    },
+    {
+        "id": "crop-status-text-01",
+        "type": "ui-text",
+        "z": "e416cf0bed26c885",
+        "group": "crop-group",
+        "order": 2,
+        "width": 6,
+        "height": 1,
+        "name": "📋 Crop Status",
+        "label": "Configuration Status",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "style": false,
+        "font": "",
+        "fontSize": 14,
+        "color": "#2ca02c",
+        "wrapText": false,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 1960,
+        "y": 1420,
         "wires": []
     }
 ]

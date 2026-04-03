@@ -22,9 +22,9 @@ def simulate_sensors(current_moisture):
     
     global pump_state
     if pump_state == "ON":
-        new_moisture = 100.0  # Pump is on, soil is fully watered
+        new_moisture = min(100.0, current_moisture + 2.0)  # Pump adds moisture
     else:
-        new_moisture = max(0.0, current_moisture - 0.5)  # Soil dries slowly
+        new_moisture = max(30.0, current_moisture - 0.5)  # Soil dries, but min 30%
         
     return temp, air_humidity, new_moisture
 
