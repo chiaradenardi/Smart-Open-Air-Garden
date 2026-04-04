@@ -127,32 +127,6 @@
         "disabled": "false"
     },
     {
-        "id": "crop-group",
-        "type": "ui-group",
-        "name": "🌾 Crop Configuration",
-        "page": "main-page",
-        "width": 12,
-        "height": 1,
-        "order": 4,
-        "showTitle": true,
-        "className": "",
-        "visible": "true",
-        "disabled": "false"
-    },
-    {
-        "id": "real-time-group",
-        "type": "ui-group",
-        "name": "🌱 Real-Time Sensors",
-        "page": "main-page",
-        "width": 12,
-        "height": 1,
-        "order": 1,
-        "showTitle": true,
-        "className": "",
-        "visible": "true",
-        "disabled": "false"
-    },
-    {
         "id": "statistics-group",
         "type": "ui-group",
         "name": "💧 Water Savings Statistics",
@@ -166,7 +140,20 @@
         "disabled": "false"
     },
     {
-        "id": "4edfc2acea62912d",
+        "id": "668e46c497c5524f",
+        "type": "ui-group",
+        "name": "🌱 Real-Time Sensors",
+        "page": "main-page",
+        "width": 12,
+        "height": 1,
+        "order": 1,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "1f8ebb56cfabc538",
         "type": "mqtt in",
         "z": "e416cf0bed26c885",
         "name": "🌱 Real-time Sensors (MQTT)",
@@ -178,48 +165,65 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 1290,
-        "y": 620,
+        "x": 1370,
+        "y": 1440,
         "wires": [
             [
-                "3a5627528a9605b3"
+                "7cefebb804c7d179",
+                "91e1b64167961ae6"
             ]
         ]
     },
     {
-        "id": "3a5627528a9605b3",
+        "id": "7cefebb804c7d179",
+        "type": "debug",
+        "z": "e416cf0bed26c885",
+        "name": "🐛 Debug MQTT Raw",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1540,
+        "y": 1360,
+        "wires": []
+    },
+    {
+        "id": "91e1b64167961ae6",
         "type": "function",
         "z": "e416cf0bed26c885",
         "name": "🔄 Split Sensors",
-        "func": "// Gestisce ENTRAMBI i formati: SenML e flat JSON\nvar sensori = msg.payload;\nvar msgUmidita = null;\nvar msgTemperatura = null;\nvar msgPompa = null;\n\n// Se è un array SenML\nif (Array.isArray(sensori)) {\n    for (var i = 0; i < sensori.length; i++) {        \n        var dato = sensori[i];\n        \n        if (dato.n === \"soil_moisture\") {\n            msgUmidita = { payload: parseFloat(dato.v) || 0, topic: \"soil_moisture\" };\n        }\n        else if (dato.n === \"temperature\") {\n            msgTemperatura = { payload: parseFloat(dato.v) || 0, topic: \"temperature\" };\n        }\n        else if (dato.n === \"pump_status\") {\n            msgPompa = { payload: parseFloat(dato.v) || 0, topic: \"pump_status\" };\n        }\n    }\n}\n// Se è un oggetto flat (come quello di device_connector)\nelse if (typeof sensori === 'object') {\n    msgTemperatura = { payload: parseFloat(sensori.temperature) || 0, topic: \"temperature\" };\n    msgUmidita = { payload: parseFloat(sensori.soil_moisture) || 0, topic: \"soil_moisture\" };\n    if (sensori.pump_status) {\n        msgPompa = { payload: parseFloat(sensori.pump_status) || 0, topic: \"pump_status\" };\n    }\n}\n\nreturn [msgUmidita, msgTemperatura, msgPompa];",
+        "func": "var sensori = msg.payload;\nvar msgUmidita = null;\nvar msgTemperatura = null;\nvar msgPompa = null;\n\nif (Array.isArray(sensori)) {\n    for (var i = 0; i < sensori.length; i++) {\n        var dato = sensori[i];\n        if (dato.n === 'soil_moisture') { msgUmidita = { payload: parseFloat(dato.v) || 0, topic: 'soil_moisture' }; }\n        else if (dato.n === 'temperature') { msgTemperatura = { payload: parseFloat(dato.v) || 0, topic: 'temperature' }; }\n        else if (dato.n === 'pump_status') { msgPompa = { payload: parseFloat(dato.v) || 0, topic: 'pump_status' }; }\n    }\n} else if (sensori && typeof sensori === 'object') {\n    msgUmidita = { payload: parseFloat(sensori.soil_moisture) || 0, topic: 'soil_moisture' };\n    msgTemperatura = { payload: parseFloat(sensori.temperature) || 0, topic: 'temperature' };\n    msgPompa = { payload: parseFloat(sensori.pump_status) || 0, topic: 'pump_status' };\n}\n\nreturn [msgUmidita, msgTemperatura, msgPompa];",
         "outputs": 3,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1580,
-        "y": 620,
+        "x": 1700,
+        "y": 1440,
         "wires": [
             [
-                "ddbb23f24a5436c6",
-                "16e293333cd5dfb8",
-                "dddb210baaaacbeb"
+                "3715a17062f535b3",
+                "1edc29c1e1895247"
             ],
             [
-                "02ed0ecf9813ccea"
+                "b030fee31518e2e3",
+                "08547a225e60db37"
             ],
             [
-                "d021e0aa87dacd3d"
+                "6dfaafab90eef9a3"
             ]
         ]
     },
     {
-        "id": "ddbb23f24a5436c6",
+        "id": "3715a17062f535b3",
         "type": "ui-gauge",
         "z": "e416cf0bed26c885",
         "name": "💧 Humidity RT",
-        "group": "real-time-group",
+        "group": "668e46c497c5524f",
         "order": 1,
         "value": "payload",
         "valueType": "msg",
@@ -249,18 +253,18 @@
         "styleRounded": true,
         "styleGlow": true,
         "className": "",
-        "x": 1860,
-        "y": 580,
+        "x": 1940,
+        "y": 1380,
         "wires": [
             []
         ]
     },
     {
-        "id": "02ed0ecf9813ccea",
+        "id": "b030fee31518e2e3",
         "type": "ui-gauge",
         "z": "e416cf0bed26c885",
         "name": "🌡️ Temperature RT",
-        "group": "real-time-group",
+        "group": "668e46c497c5524f",
         "order": 0,
         "value": "payload",
         "valueType": "msg",
@@ -290,49 +294,17 @@
         "styleRounded": true,
         "styleGlow": true,
         "className": "",
-        "x": 1880,
-        "y": 660,
+        "x": 1960,
+        "y": 1460,
         "wires": [
             []
         ]
     },
     {
-        "id": "d021e0aa87dacd3d",
+        "id": "1edc29c1e1895247",
         "type": "ui-chart",
         "z": "e416cf0bed26c885",
-        "group": "real-time-group",
-        "name": "💧 Pump Status",
-        "label": "Pump Activity",
-        "order": 5,
-        "chartType": "bar",
-        "category": "topic",
-        "categoryType": "msg",
-        "xAxisLabel": "Time",
-        "xAxisType": "time",
-        "yAxisLabel": "Status",
-        "yAxisProperty": "payload",
-        "yAxisPropertyType": "msg",
-        "action": "append",
-        "pointRadius": 2,
-        "showLegend": true,
-        "removeOlder": 1,
-        "removeOlderUnit": "3600",
-        "colors": [
-            "#2ca02c"
-        ],
-        "width": 6,
-        "height": 4,
-        "x": 1860,
-        "y": 700,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "16e293333cd5dfb8",
-        "type": "ui-chart",
-        "z": "e416cf0bed26c885",
-        "group": "real-time-group",
+        "group": "668e46c497c5524f",
         "name": "📈 Humidity Timeline",
         "label": "Soil Moisture (RT)",
         "order": 3,
@@ -340,15 +312,18 @@
         "category": "topic",
         "categoryType": "msg",
         "xAxisLabel": "Time",
+        "xAxisProperty": "",
         "xAxisPropertyType": "timestamp",
         "xAxisType": "time",
         "xAxisFormat": "HH:mm:ss",
+        "xAxisFormatType": "auto",
         "yAxisLabel": "%",
         "yAxisProperty": "payload",
         "yAxisPropertyType": "msg",
         "ymin": 0,
         "ymax": 100,
         "action": "append",
+        "stackSeries": false,
         "pointShape": "circle",
         "pointRadius": 2,
         "showLegend": true,
@@ -359,17 +334,18 @@
         ],
         "width": 6,
         "height": 4,
-        "x": 1840,
-        "y": 540,
+        "className": "",
+        "x": 1950,
+        "y": 1540,
         "wires": [
             []
         ]
     },
     {
-        "id": "dddb210baaaacbeb",
+        "id": "08547a225e60db37",
         "type": "ui-chart",
         "z": "e416cf0bed26c885",
-        "group": "real-time-group",
+        "group": "668e46c497c5524f",
         "name": "📈 Temperature Timeline",
         "label": "Temperature (RT)",
         "order": 4,
@@ -377,15 +353,18 @@
         "category": "topic",
         "categoryType": "msg",
         "xAxisLabel": "Time",
+        "xAxisProperty": "",
         "xAxisPropertyType": "timestamp",
         "xAxisType": "time",
         "xAxisFormat": "HH:mm:ss",
+        "xAxisFormatType": "auto",
         "yAxisLabel": "°C",
         "yAxisProperty": "payload",
         "yAxisPropertyType": "msg",
         "ymin": 0,
         "ymax": 40,
         "action": "append",
+        "stackSeries": false,
         "pointShape": "circle",
         "pointRadius": 2,
         "showLegend": true,
@@ -396,14 +375,51 @@
         ],
         "width": 6,
         "height": 4,
-        "x": 1890,
-        "y": 620,
+        "className": "",
+        "x": 1950,
+        "y": 1620,
         "wires": [
             []
         ]
     },
     {
-        "id": "ae826dd410919705",
+        "id": "6dfaafab90eef9a3",
+        "type": "ui-chart",
+        "z": "e416cf0bed26c885",
+        "group": "668e46c497c5524f",
+        "name": "💧 Pump Status",
+        "label": "Pump Activity",
+        "order": 5,
+        "chartType": "bar",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "Time",
+        "xAxisProperty": "",
+        "xAxisPropertyType": "timestamp",
+        "xAxisType": "time",
+        "yAxisLabel": "Status",
+        "yAxisProperty": "payload",
+        "yAxisPropertyType": "msg",
+        "action": "append",
+        "stackSeries": false,
+        "pointRadius": 2,
+        "showLegend": true,
+        "removeOlder": 1,
+        "removeOlderUnit": "3600",
+        "colors": [
+            "#2ca02c"
+        ],
+        "width": 6,
+        "height": 4,
+        "className": "",
+        "x": 1950,
+        "y": 1700,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "60303cb1eb96084a",
         "type": "ui-button",
         "z": "e416cf0bed26c885",
         "group": "statistics-group",
@@ -425,16 +441,16 @@
         "topicType": "msg",
         "textColor": "#ffffff",
         "enableClick": true,
-        "x": 1110,
-        "y": 940,
+        "x": 1190,
+        "y": 1920,
         "wires": [
             [
-                "4c23f8063a43ed78"
+                "68cb244eca0ca539"
             ]
         ]
     },
     {
-        "id": "4c23f8063a43ed78",
+        "id": "68cb244eca0ca539",
         "type": "http request",
         "z": "e416cf0bed26c885",
         "name": "📡 REST: statistics-service",
@@ -449,16 +465,16 @@
         "authType": "",
         "senderr": false,
         "headers": [],
-        "x": 1390,
-        "y": 940,
+        "x": 1450,
+        "y": 1920,
         "wires": [
             [
-                "c23b2fea22cb62a8"
+                "f766a2d8a915a8c4"
             ]
         ]
     },
     {
-        "id": "c23b2fea22cb62a8",
+        "id": "f766a2d8a915a8c4",
         "type": "function",
         "z": "e416cf0bed26c885",
         "name": "🎯 Extract Statistics",
@@ -469,19 +485,19 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1640,
-        "y": 940,
+        "x": 1700,
+        "y": 1920,
         "wires": [
             [
-                "d8a0b9dbf825565c",
-                "0f0517e98a438eb8",
-                "e6e7cc09bf4a026c",
-                "983859efb7d9b7f0"
+                "a485038897abbec6",
+                "c2f1e94333208f94",
+                "deb40f964ffdd6e5",
+                "74e1f241ef92f290"
             ]
         ]
     },
     {
-        "id": "0f0517e98a438eb8",
+        "id": "c2f1e94333208f94",
         "type": "ui-gauge",
         "z": "e416cf0bed26c885",
         "name": "💾 Water Saved",
@@ -515,14 +531,14 @@
         "styleRounded": true,
         "styleGlow": true,
         "className": "",
-        "x": 1910,
-        "y": 840,
+        "x": 1960,
+        "y": 1860,
         "wires": [
             []
         ]
     },
     {
-        "id": "d8a0b9dbf825565c",
+        "id": "a485038897abbec6",
         "type": "ui-text",
         "z": "e416cf0bed26c885",
         "group": "statistics-group",
@@ -541,12 +557,12 @@
         "className": "",
         "value": "payload",
         "valueType": "msg",
-        "x": 1920,
-        "y": 980,
+        "x": 1980,
+        "y": 1960,
         "wires": []
     },
     {
-        "id": "e6e7cc09bf4a026c",
+        "id": "deb40f964ffdd6e5",
         "type": "ui-chart",
         "z": "e416cf0bed26c885",
         "group": "statistics-group",
@@ -557,11 +573,14 @@
         "category": "payload.timestamp",
         "categoryType": "msg",
         "xAxisLabel": "Time",
+        "xAxisProperty": "",
+        "xAxisPropertyType": "timestamp",
         "xAxisType": "category",
         "yAxisLabel": "Liters",
         "yAxisProperty": "payload.liters_saved",
         "yAxisPropertyType": "msg",
         "action": "append",
+        "stackSeries": false,
         "pointShape": "circle",
         "pointRadius": 4,
         "showLegend": true,
@@ -572,14 +591,15 @@
         ],
         "width": 6,
         "height": 4,
-        "x": 1930,
-        "y": 1020,
+        "className": "",
+        "x": 1980,
+        "y": 2000,
         "wires": [
             []
         ]
     },
     {
-        "id": "a654f8ff99939e94",
+        "id": "c22fe8800d20eaed",
         "type": "inject",
         "z": "e416cf0bed26c885",
         "name": "⏰ Auto-refresh every 5 min",
@@ -590,21 +610,21 @@
         ],
         "repeat": "300",
         "crontab": "",
-        "once": false,
-        "onceDelay": 0.1,
+        "once": true,
+        "onceDelay": 3,
         "topic": "",
         "payload": "",
         "payloadType": "str",
-        "x": 1130,
-        "y": 1000,
+        "x": 1210,
+        "y": 1980,
         "wires": [
             [
-                "4c23f8063a43ed78"
+                "68cb244eca0ca539"
             ]
         ]
     },
     {
-        "id": "983859efb7d9b7f0",
+        "id": "74e1f241ef92f290",
         "type": "debug",
         "z": "e416cf0bed26c885",
         "name": "🐛 Debug Statistics",
@@ -615,278 +635,8 @@
         "complete": "true",
         "statusVal": "",
         "statusType": "auto",
-        "x": 1920,
-        "y": 920,
-        "wires": []
-    },
-    {
-        "id": "fault-mqtt-in-01",
-        "type": "mqtt in",
-        "z": "e416cf0bed26c885",
-        "name": "🚨 Fault Alerts (MQTT)",
-        "topic": "garden/+/alerts",
-        "qos": "2",
-        "datatype": "auto-detect",
-        "broker": "968f1cab134c7246",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
-        "inputs": 0,
-        "x": 1130,
-        "y": 1240,
-        "wires": [
-            [
-                "fault-json-parse-01"
-            ]
-        ]
-    },
-    {
-        "id": "fault-json-parse-01",
-        "type": "json",
-        "z": "e416cf0bed26c885",
-        "name": "Parse Alert",
-        "property": "payload",
-        "action": "",
-        "pretty": false,
-        "x": 1350,
-        "y": 1240,
-        "wires": [
-            [
-                "fault-format-01"
-            ]
-        ]
-    },
-    {
-        "id": "fault-format-01",
-        "type": "function",
-        "z": "e416cf0bed26c885",
-        "name": "🔴 Format Alert",
-        "func": "var alert = msg.payload;\nvar alertText = '⚠️ FAULT DETECTED';\nif (alert && alert.message) { alertText = '🚨 ' + alert.message; }\nif (alert && alert.type) { alertText += ' [' + alert.type + ']'; }\nmsg.payload = { text: alertText, timestamp: new Date().toLocaleString('it-IT') };\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1540,
-        "y": 1240,
-        "wires": [
-            [
-                "fault-text-display-01"
-            ]
-        ]
-    },
-    {
-        "id": "fault-text-display-01",
-        "type": "ui-text",
-        "z": "e416cf0bed26c885",
-        "group": "fault-group",
-        "order": 0,
-        "width": 6,
-        "height": 2,
-        "name": "🚨 Fault Alert Display",
-        "label": "Last Alert",
-        "format": "🕐 {{msg.payload.timestamp}} — {{msg.payload.text}}",
-        "layout": "row-spread",
-        "style": true,
-        "font": "monospace",
-        "fontSize": 14,
-        "color": "#ff4444",
-        "wrapText": true,
-        "className": "",
-        "value": "payload",
-        "valueType": "msg",
-        "x": 1760,
-        "y": 1240,
-        "wires": []
-    },
-    {
-        "id": "crop-dropdown-01",
-        "type": "ui-dropdown",
-        "z": "e416cf0bed26c885",
-        "group": "crop-group",
-        "name": "🌾 Crop Selector",
-        "label": "Select Crop Type",
-        "tooltip": "Choose the crop planted in your garden",
-        "order": 0,
-        "width": 4,
-        "height": 1,
-        "passthru": true,
-        "multiple": false,
-        "chips": false,
-        "options": [
-            {
-                "label": "🍅 Tomato",
-                "value": "tomato",
-                "type": "str"
-            },
-            {
-                "label": "🥬 Lettuce",
-                "value": "lettuce",
-                "type": "str"
-            },
-            {
-                "label": "🌿 Basil",
-                "value": "basil",
-                "type": "str"
-            },
-            {
-                "label": "🥕 Carrot",
-                "value": "carrot",
-                "type": "str"
-            },
-            {
-                "label": "🍓 Strawberry",
-                "value": "strawberry",
-                "type": "str"
-            }
-        ],
-        "topic": "crop_type",
-        "topicType": "str",
-        "className": "",
-        "x": 1130,
-        "y": 1440,
-        "wires": [
-            [
-                "crop-store-context-01"
-            ]
-        ]
-    },
-    {
-        "id": "crop-store-context-01",
-        "type": "function",
-        "z": "e416cf0bed26c885",
-        "name": "💾 Store crop",
-        "func": "flow.set('selectedCrop', msg.payload);\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1340,
-        "y": 1440,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "crop-send-btn-01",
-        "type": "ui-button",
-        "z": "e416cf0bed26c885",
-        "group": "crop-group",
-        "name": "✅ Send Crop Config",
-        "label": "Apply Crop",
-        "order": 1,
-        "width": 3,
-        "height": 1,
-        "emulateClick": false,
-        "tooltip": "Send crop selection to Smart Irrigation Service via REST",
-        "color": "",
-        "bgcolor": "#2ca02c",
-        "className": "",
-        "icon": "leaf",
-        "iconPosition": "left",
-        "payload": "",
-        "payloadType": "str",
-        "topic": "topic",
-        "topicType": "msg",
-        "textColor": "#ffffff",
-        "enableClick": true,
-        "x": 1130,
-        "y": 1500,
-        "wires": [
-            [
-                "crop-build-payload-01"
-            ]
-        ]
-    },
-    {
-        "id": "crop-build-payload-01",
-        "type": "function",
-        "z": "e416cf0bed26c885",
-        "name": "📦 Build REST payload",
-        "func": "var crop = flow.get('selectedCrop') || 'tomato';\nmsg.payload = { crop_type: crop };\nmsg.headers = { 'Content-Type': 'application/json' };\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1370,
-        "y": 1500,
-        "wires": [
-            [
-                "crop-rest-post-01"
-            ]
-        ]
-    },
-    {
-        "id": "crop-rest-post-01",
-        "type": "http request",
-        "z": "e416cf0bed26c885",
-        "name": "📡 REST POST: smart-irrigation-service",
-        "method": "POST",
-        "ret": "obj",
-        "paytoqs": "ignore",
-        "url": "http://smart-irrigation-service:8083/api/crop",
-        "tls": "",
-        "persist": false,
-        "proxy": "",
-        "insecureHTTPParser": false,
-        "authType": "",
-        "senderr": false,
-        "headers": [],
-        "x": 1680,
-        "y": 1500,
-        "wires": [
-            [
-                "crop-response-01"
-            ]
-        ]
-    },
-    {
-        "id": "crop-response-01",
-        "type": "function",
-        "z": "e416cf0bed26c885",
-        "name": "✅ Handle Response",
-        "func": "var status = msg.statusCode;\nif (status === 200 || status === 201) {\n    msg.payload = '✅ Crop: ' + (msg.payload.crop_type || 'OK') + ' — ' + new Date().toLocaleString('it-IT');\n} else {\n    msg.payload = '❌ Errore ' + status + ': ' + JSON.stringify(msg.payload);\n}\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
         "x": 1980,
-        "y": 1500,
-        "wires": [
-            [
-                "crop-status-text-01"
-            ]
-        ]
-    },
-    {
-        "id": "crop-status-text-01",
-        "type": "ui-text",
-        "z": "e416cf0bed26c885",
-        "group": "crop-group",
-        "order": 2,
-        "width": 6,
-        "height": 1,
-        "name": "📋 Crop Status",
-        "label": "Configuration Status",
-        "format": "{{msg.payload}}",
-        "layout": "row-spread",
-        "style": false,
-        "font": "",
-        "fontSize": 14,
-        "color": "#2ca02c",
-        "wrapText": false,
-        "className": "",
-        "value": "payload",
-        "valueType": "msg",
-        "x": 1960,
-        "y": 1420,
+        "y": 1820,
         "wires": []
     }
 ]
