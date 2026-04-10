@@ -56,14 +56,22 @@ class MultiSensorSim:
         if isinstance(msg, str):
             msg = json.loads(msg)
 
+        # Supporto per array SenML: estraiamo il primo dizionario se è una lista
+        if isinstance(msg, list) and len(msg) > 0:
+            msg = msg[0]
+
         target_device = topic.split('/')[1]
         
         if target_device in self.devices:
+            # Controlla sia la vecchia chiave 'status' che la nuova chiave 'v' (SenML)
             status = msg.get("status")
-            if status == "ON":
+            v_value = msg.get("v")
+            
+            # Accende se status è "ON" oppure se il valore SenML è 1
+            if status == "ON" or v_value == 1:
                 self.devices[target_device]["pump_active"] = True
                 print(f"[SIM] {target_device} -> POMPA ACCESA")
-            elif status == "OFF":
+            elif status == "OFF" or v_value == 0:
                 self.devices[target_device]["pump_active"] = False
                 print(f"[SIM] {target_device} -> POMPA SPENTA")
 
