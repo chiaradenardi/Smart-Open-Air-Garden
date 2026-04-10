@@ -8,8 +8,10 @@ services:
       - "9001:9001"
 
   # La tua Dashboard Node-RED
+  # La tua Dashboard Node-RED
   node-red:
-    image: nodered/node-red:latest
+    build: ./node_red_data     
+    container_name: node-red
     ports:
       - "1880:1880"
     depends_on:
