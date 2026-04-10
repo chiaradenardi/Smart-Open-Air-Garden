@@ -99,10 +99,10 @@ services:
       - influxdb
     restart: always
 
-  telegram-bot:
+  telegram_bot:
     build:
       context: ./Telegram_Bot
-      dockerfile: DockerFile
+      dockerfile: Dockerfile
     container_name: telegram-bot
     env_file:
       - ./Telegram_Bot/.env
