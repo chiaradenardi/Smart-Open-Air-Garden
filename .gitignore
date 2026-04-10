@@ -48,6 +48,14 @@ coverage.xml
 *.cover
 *.py.cover
 .hypothesis/
+
+# Node-RED backup and runtime files
+node_red_data/*.backup
+node_red_data/.config.users.json.backup
+node_red_data/.config.runtime.json.backup
+node_red_data/.config.nodes.json.backup
+node_red_data/.flows_cred.json.backup
+node_red_data/.flows.json.backup
 .pytest_cache/
 cover/
 
