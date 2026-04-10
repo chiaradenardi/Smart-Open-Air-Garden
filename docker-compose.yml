@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Il Message Broker (Mosquitto) serve per la comunicazione MQTT
   message-broker:
@@ -10,8 +8,10 @@ services:
       - "9001:9001"
 
   # La tua Dashboard Node-RED
+  # La tua Dashboard Node-RED
   node-red:
-    image: nodered/node-red:latest
+    build: ./node_red_data     
+    container_name: node-red
     ports:
       - "1880:1880"
     depends_on:
@@ -97,4 +97,19 @@ services:
     depends_on:
       - influx-adaptor
       - influxdb
+    restart: always
+
+  telegram_bot:
+    build:
+      context: ./Telegram_Bot
+      dockerfile: Dockerfile
+    container_name: telegram-bot
+    env_file:
+      - ./Telegram_Bot/.env
+    environment:
+      - BROKER_IP=message-broker
+      - SLOTS_URL=http://service-catalog:8080/slots
+    depends_on:
+      - message-broker
+      - service-catalog
     restart: always
