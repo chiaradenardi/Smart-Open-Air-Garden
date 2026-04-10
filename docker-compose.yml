@@ -98,3 +98,18 @@ services:
       - influx-adaptor
       - influxdb
     restart: always
+
+  telegram-bot:
+    build:
+      context: ./Telegram_Bot
+      dockerfile: DockerFile
+    container_name: telegram-bot
+    env_file:
+      - ./Telegram_Bot/.env
+    environment:
+      - BROKER_IP=message-broker
+      - SLOTS_URL=http://service-catalog:8080/slots
+    depends_on:
+      - message-broker
+      - service-catalog
+    restart: always
