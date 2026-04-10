@@ -30,7 +30,17 @@ class SmartIrrigation:
             
             # --- MODIFICA QUI: Estrazione umidità dal formato semplice ---
             # msg è un dizionario tipo {"soil_moisture": 60.0, ...}
-            current_moisture = msg.get("soil_moisture")
+            current_moisture = None
+        
+        # Se il messaggio è una lista (SenML)
+            if isinstance(msg, list):
+                for entry in msg:
+                    if entry.get("n") == "soil_moisture":
+                        current_moisture = entry.get("v")
+                        break
+        # Se il messaggio è un dizionario semplice (per compatibilità)
+            elif isinstance(msg, dict):
+                current_moisture = msg.get("soil_moisture")
             
             if current_moisture is None: 
                 return
