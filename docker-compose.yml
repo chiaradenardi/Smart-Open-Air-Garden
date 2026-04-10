@@ -117,5 +117,17 @@ services:
       - service-catalog
     restart: always
 
+  device-connector:
+    build: ./device_connector
+    image: smart-open-air-garden-device-connector
+    container_name: device-connector
+    environment:
+      - CATALOG_URL=http://service-catalog:8080/broker
+      - DEVICE_ID=RPi_001
+    depends_on:
+      - message-broker
+      - service-catalog
+    restart: always
+
 volumes:
   node_red_modules:
