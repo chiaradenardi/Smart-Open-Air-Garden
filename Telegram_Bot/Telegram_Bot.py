@@ -28,6 +28,7 @@ def on_connect(client, userdata, flags, rc):
         # Il bot si iscrive ai topic degli allarmi e della pompa
         client.subscribe("garden/alerts/faults")
         client.subscribe("garden/actuators/pump")
+        client.subscribe("garden/statistics/water-saved")
     else:
         print(f"[MQTT] Errore di connessione: {rc}")
 
@@ -36,10 +37,23 @@ def on_message(client, userdata, msg):
     payload = msg.payload.decode('utf-8')
     print(f"[MQTT RICEVUTO] {msg.topic}: {payload}")
     
-    # Se un utente ha avviato il bot, inoltriamo il messaggio sul suo smartphone
+    # Se un utente ha avviato il bot, inoltriamo il messaggio
     if user_chat_id:
         if "faults" in msg.topic:
             testo = f"🚨 *ALLARME CRITICO!* 🚨\n{payload}"
+        
+        # 🔴 NUOVO: Gestisci le statistiche d'acqua
+        elif "water-saved" in msg.topic:
+            try:
+                data = json.loads(payload)
+                testo = f"""💧 *Statistiche Risparmio Idrico* 💧
+Litri risparmiati: {data['litri_risparmiati']}L
+Efficienza: {data['percentuale_efficienza']}%
+Accensioni pompa: {data['accensioni_pompa']}
+Aggiornato: {data['timestamp']}"""
+            except:
+                testo = f"💧 *Aggiornamento acqua:*\n{payload}"
+        
         else:
             testo = f"💧 *Aggiornamento Pompa:*\n{payload}"
             
