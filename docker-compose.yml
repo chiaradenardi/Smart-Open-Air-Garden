@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Il Message Broker (Mosquitto) serve per la comunicazione MQTT
   message-broker:
