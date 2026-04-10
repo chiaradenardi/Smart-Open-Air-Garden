@@ -56,6 +56,9 @@ node_red_data/.config.runtime.json.backup
 node_red_data/.config.nodes.json.backup
 node_red_data/.flows_cred.json.backup
 node_red_data/.flows.json.backup
+
+# NPM cache
+node_red_data/.npm/
 .pytest_cache/
 cover/
 
