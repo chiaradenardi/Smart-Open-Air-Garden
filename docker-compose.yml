@@ -10,7 +10,7 @@ services:
   # La tua Dashboard Node-RED
   # La tua Dashboard Node-RED
   node-red:
-    build: ./node_red_data     
+    image: nodered/node-red:latest
     container_name: node-red
     ports:
       - "1880:1880"
