@@ -29,10 +29,11 @@ class PriceEndpoint:
         return json.dumps(price,indent=4)
     
     def PUT(self):
-        if "NewWaterPricePerM3" not in body_json:
-             return json.dumps({"error": "Data missing (NewWaterPricePerM3 not present in body)"}, indent=4)
         body = cherrypy.request.body.read().decode('utf-8')
         body_json=json.loads(body)
+        if "NewWaterPricePerM3" not in body_json:
+             return json.dumps({"error": "Data missing (NewWaterPricePerM3 not present in body)"}, indent=4)
+        
         f=open("catalogManager.json","r")
         data=json.load(f)
         f.close()

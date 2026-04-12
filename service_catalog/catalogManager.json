@@ -4,7 +4,7 @@
         "broker_name": "message-broker",
         "port": 1883
     },
-    "waterPricePerM3": 2.0,
+    "waterPricePerM3": 2.5,
     "devicesList": [
         {
             "deviceID": "RPi_001",
@@ -41,6 +41,23 @@
                 "command_topic": "garden/RPi_002/pump"
             },
             "lastUpdate": 1771102729.8
+        },
+        {
+            "deviceID": "RPi_003",
+            "deviceName": "GardenGateway_003",
+            "status": "active",
+            "sensors": [
+                "SoilMoisture",
+                "DHT11"
+            ],
+            "actuators": [
+                "MicroServoPump"
+            ],
+            "config": {
+                "clientID": "Client_RPi_003",
+                "telemetry_topic": "garden/RPi_003/telemetry",
+                "command_topic": "garden/RPi_003/pump"
+            }
         }
     ],
     "servicesList": [
@@ -148,12 +165,17 @@
         {
             "userID": "U_001",
             "userName": "Davide",
-            "telegramChatID": "123456789"
+            "telegramChatID": "8583540994"
         },
         {
             "userID": "U_002",
             "userName": "Mario",
             "telegramChatID": "000000002"
+        },
+        {
+            "userID": "U_003",
+            "userName": "Luigi",
+            "telegramChatID": "000000003"
         }
     ],
     "irrigation_strategies": {
@@ -164,13 +186,21 @@
         "P2": {
             "name": "Basilico",
             "min_moisture_threshold": 60.0
+        },
+        "P3": {
+            "name": "Lattuga",
+            "min_moisture_threshold": 50.0
+        },
+        "P4": {
+            "name": "Cipolla",
+            "min_moisture_threshold": 60.0
         }
     },
     "garden_slots": [
         {
             "slotID": "S1",
             "slotName": "Orto Nord",
-            "plantID": "P2",
+            "plantID": "P1",
             "deviceID": "RPi_001",
             "status": "active"
         },
@@ -179,6 +209,13 @@
             "slotName": "Balcone Sud",
             "plantID": "P2",
             "deviceID": "RPi_002",
+            "status": "active"
+        },
+        {
+            "slotID": "S3",
+            "plantID": "P3",
+            "deviceID": "RPi_003",
+            "slotName": "Zona S3",
             "status": "active"
         }
     ]
