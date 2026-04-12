@@ -99,7 +99,7 @@ class SmartIrrigation:
                             "u": "on/off",
                             "t": int(time.time())
                         }]
-                        self.client.myPublish(f"garden/{device_id}/pump", json.dumps(command_payload))
+                        self.client.myPublish(f"garden/{device_id}/pump", command_payload)
                         self.pumps_status[device_id] = True
                         
                     else:
@@ -116,7 +116,7 @@ class SmartIrrigation:
                         "u": "on/off",
                         "t": int(time.time())
                     }]
-                    self.client.myPublish(f"garden/{device_id}/pump", json.dumps(command_payload))
+                    self.client.myPublish(f"garden/{device_id}/pump", command_payload)
                     self.pumps_status[device_id] = False
         except Exception as e:
             print(f"Errore notify per {topic}: {e}")
