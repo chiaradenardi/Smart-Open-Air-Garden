@@ -83,13 +83,25 @@ class SmartIrrigation:
             if current_moisture < moisture_threshold:
                 if not self.pumps_status[device_id]:
                     print(f"[{device_id}] Umidità critica. Controllo meteo...")
-                    weather_res = requests.get(self.weather_adaptor_url).json()
-                    rain_6h = weather_res.get("rain_6h", 0)
-                    
+                    rain_6h = 0
+                    try:
+                        weather_res = requests.get(self.weather_adaptor_url, timeout=5).json()
+                        rain_6h = weather_res.get("rain_6h", 0)
+                    except Exception as e:
+                        print(f"  [!] Errore Meteo: {e}. Procedo con l'irrigazione di sicurezza.")
+
                     if rain_6h < 2.0:
                         print(f"[{device_id}] Azione: START Irrigazione (Pioggia prevista: {rain_6h}mm)")
-                        self.client.myPublish(f"garden/{device_id}/pump", json.dumps({"status": "ON", "amount": 500}))
+                        command_payload = [{
+                            "bn": f"{device_id}/",
+                            "n": "pump_status",
+                            "v": 1, # 1 = ON
+                            "u": "on/off",
+                            "t": int(time.time())
+                        }]
+                        self.client.myPublish(f"garden/{device_id}/pump", json.dumps(command_payload))
                         self.pumps_status[device_id] = True
+                        
                     else:
                         print(f"[{device_id}] Azione: SKIP (Pioverà tra poco)")
 
@@ -97,9 +109,15 @@ class SmartIrrigation:
             elif current_moisture > target_moisture:
                 if self.pumps_status[device_id]:
                     print(f"[{device_id}] Umidità ripristinata. Azione: STOP.")
-                    self.client.myPublish(f"garden/{device_id}/pump", json.dumps({"status": "OFF"}))
+                    command_payload = [{
+                        "bn": f"{device_id}/",
+                        "n": "pump_status",
+                        "v": 0, # 0 = OFF
+                        "u": "on/off",
+                        "t": int(time.time())
+                    }]
+                    self.client.myPublish(f"garden/{device_id}/pump", json.dumps(command_payload))
                     self.pumps_status[device_id] = False
-
         except Exception as e:
             print(f"Errore notify per {topic}: {e}")
 
