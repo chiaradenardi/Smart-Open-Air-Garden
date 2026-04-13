@@ -144,7 +144,7 @@
         "type": "mqtt in",
         "z": "e416cf0bed26c885",
         "name": "🌱 Real-time Sensors (MQTT)",
-        "topic": "garden/sensors/telemetry",
+        "topic": "garden/+/telemetry",
         "qos": "2",
         "datatype": "auto-detect",
         "broker": "968f1cab134c7246",
@@ -182,7 +182,7 @@
         "type": "function",
         "z": "e416cf0bed26c885",
         "name": "🔄 Split Sensors",
-        "func": "var sensori = msg.payload;\nvar msgUmidita = null;\nvar msgTemperatura = null;\nvar msgPompa = null;\n\nif (Array.isArray(sensori)) {\n    for (var i = 0; i < sensori.length; i++) {\n        var dato = sensori[i];\n        if (dato.n === 'soil_moisture') { msgUmidita = { payload: parseFloat(dato.v) || 0, topic: 'soil_moisture' }; }\n        else if (dato.n === 'temperature') { msgTemperatura = { payload: parseFloat(dato.v) || 0, topic: 'temperature' }; }\n        else if (dato.n === 'pump_status') { msgPompa = { payload: parseFloat(dato.v) || 0, topic: 'pump_status' }; }\n    }\n} else if (sensori && typeof sensori === 'object') {\n    msgUmidita = { payload: parseFloat(sensori.soil_moisture) || 0, topic: 'soil_moisture' };\n    msgTemperatura = { payload: parseFloat(sensori.temperature) || 0, topic: 'temperature' };\n    msgPompa = { payload: parseFloat(sensori.pump_status) || 0, topic: 'pump_status' };\n}\n\nreturn [msgUmidita, msgTemperatura, msgPompa];",
+        "func": "var sensori = msg.payload;\nvar msgUmidita = null;\nvar msgTemperatura = null;\nvar msgPompa = null;\n\n// Extract device_id from topic (e.g., garden/RPi_001/telemetry -> RPi_001)\nvar topic_parts = msg.topic.split('/');\nvar device_id = topic_parts[1] || 'unknown';\n\nif (Array.isArray(sensori)) {\n    for (var i = 0; i < sensori.length; i++) {\n        var dato = sensori[i];\n        if (dato.n === 'soil_moisture') { msgUmidita = { payload: parseFloat(dato.v) || 0, topic: device_id, device_id: device_id, sensor: 'soil_moisture' }; }\n        else if (dato.n === 'temperature') { msgTemperatura = { payload: parseFloat(dato.v) || 0, topic: device_id, device_id: device_id, sensor: 'temperature' }; }\n        else if (dato.n === 'pump_status') { msgPompa = { payload: parseFloat(dato.v) || 0, topic: device_id, device_id: device_id, sensor: 'pump_status' }; }\n    }\n} else if (sensori && typeof sensori === 'object') {\n    msgUmidita = { payload: parseFloat(sensori.soil_moisture) || 0, topic: device_id, device_id: device_id, sensor: 'soil_moisture' };\n    msgTemperatura = { payload: parseFloat(sensori.temperature) || 0, topic: device_id, device_id: device_id, sensor: 'temperature' };\n    msgPompa = { payload: parseFloat(sensori.pump_status) || 0, topic: device_id, device_id: device_id, sensor: 'pump_status' };\n}\n\nreturn [msgUmidita, msgTemperatura, msgPompa];",
         "outputs": 3,
         "timeout": 0,
         "noerr": 0,
@@ -317,7 +317,14 @@
         "removeOlder": 1,
         "removeOlderUnit": "3600",
         "colors": [
-            "#0095ff"
+            "#0095ff",
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f"
         ],
         "width": 6,
         "height": 4,
@@ -358,7 +365,14 @@
         "removeOlder": 1,
         "removeOlderUnit": "3600",
         "colors": [
-            "#ff7f0e"
+            "#0095ff",
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f"
         ],
         "width": 6,
         "height": 4,
@@ -394,7 +408,14 @@
         "removeOlder": 1,
         "removeOlderUnit": "3600",
         "colors": [
-            "#2ca02c"
+            "#2ca02c",
+            "#ff7f0e",
+            "#0095ff",
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f"
         ],
         "width": 6,
         "height": 4,
@@ -465,7 +486,7 @@
         "type": "function",
         "z": "e416cf0bed26c885",
         "name": "🎯 Extract Statistics",
-        "func": "if (msg.payload && msg.payload.statistics) {\n    var stats = msg.payload.statistics;\n    msg.payload = {\n        liters_saved: stats.liters_saved,\n        savings_percentage: stats.savings_percentage,\n        pump_activations: stats.pump_activations_smart,\n        liters_smart: stats.liters_used_smart,\n        liters_fixed: stats.liters_fixed_timer,\n        minutes_smart: stats.minutes_used_smart,\n        minutes_fixed: stats.minutes_fixed_timer,\n        timestamp: new Date().toLocaleString('it-IT')\n    };\n}\nreturn msg;",
+        "func": "if (msg.payload && msg.payload.statistics) {\n    var stats = msg.payload.statistics;\n    msg.payload = {\n        liters_saved: stats.liters_saved,\n        savings_percentage: stats.savings_percentage,\n        pump_activations: stats.pump_activations_smart,\n        liters_smart: stats.liters_used_smart,\n        liters_fixed: stats.liters_fixed_timer,\n        minutes_smart: stats.minutes_used_smart,\n        minutes_fixed: stats.minutes_fixed_timer,\n        euros_saved: stats.euros_saved,\n        cost_per_liter: stats.cost_per_liter,\n        timestamp: new Date().toLocaleString('it-IT')\n    };\n}\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -479,7 +500,8 @@
                 "a485038897abbec6",
                 "c2f1e94333208f94",
                 "deb40f964ffdd6e5",
-                "74e1f241ef92f290"
+                "74e1f241ef92f290",
+                "euros-saved-gauge"
             ]
         ]
     },
@@ -530,17 +552,17 @@
         "z": "e416cf0bed26c885",
         "group": "statistics-group",
         "order": 0,
-        "width": 6,
+        "width": 9,
         "height": 2,
         "name": "📊 Full Report",
         "label": "Statistics Report",
-        "format": "{{msg.payload.savings_percentage}}% Risparmio | {{msg.payload.liters_saved}}L Salvati | {{msg.payload.pump_activations}} Accensioni | 🕐 {{msg.payload.timestamp}}",
+        "format": "{{msg.payload.savings_percentage}}% Risparmio | {{msg.payload.liters_saved}}L Salvati | 💶 {{msg.payload.euros_saved}}€ | {{msg.payload.pump_activations}} Accensioni | 🕐 {{msg.payload.timestamp}}",
         "layout": "row-spread",
         "style": true,
         "font": "monospace",
-        "fontSize": 14,
+        "fontSize": 13,
         "color": "#ffffff",
-        "wrapText": false,
+        "wrapText": true,
         "className": "",
         "value": "payload",
         "valueType": "msg",
@@ -625,5 +647,46 @@
         "x": 1980,
         "y": 1820,
         "wires": []
+    },
+    {
+        "id": "euros-saved-gauge",
+        "type": "ui-gauge",
+        "z": "e416cf0bed26c885",
+        "name": "💶 Euros Saved",
+        "group": "statistics-group",
+        "order": 2,
+        "value": "payload.euros_saved",
+        "valueType": "msg",
+        "width": 3,
+        "height": 3,
+        "gtype": "gauge",
+        "gstyle": "needle",
+        "title": "Euros Saved",
+        "alwaysShowTitle": true,
+        "units": "€",
+        "icon": "euro",
+        "prefix": "",
+        "suffix": " €",
+        "segments": [
+            {
+                "from": "0",
+                "color": "#DAA520",
+                "text": "",
+                "textType": "label"
+            }
+        ],
+        "min": 0,
+        "max": 50,
+        "sizeThickness": 16,
+        "sizeGap": 4,
+        "sizeKeyThickness": "",
+        "styleRounded": true,
+        "styleGlow": true,
+        "className": "",
+        "x": 1960,
+        "y": 1900,
+        "wires": [
+            []
+        ]
     }
 ]
