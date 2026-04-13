@@ -18,9 +18,6 @@ services:
       - message-broker
     volumes:
       - ./node_red_data:/data
-      # Named volume per node_modules: garantisce che le dipendenze (dashboard, etc)
-      # siano disponibili anche dopo il montaggio del volume locale
-      - node_red_modules:/data/node_modules
   
   #*****************************************************************************************
   # --- AGGIUNTO DA Davide 12/03/2026: Il Database ---
@@ -118,4 +115,5 @@ services:
     restart: always
 
 volumes:
+  node_red_data:
   node_red_modules:
