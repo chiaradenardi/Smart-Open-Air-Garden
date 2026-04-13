@@ -114,6 +114,15 @@ services:
       - service-catalog
     restart: always
 
+  fault-detection-service:
+    build: ./fault-detection-service
+    container_name: fault-detection-service
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - message-broker
+    restart: always
+
   device-connector:
     build: ./device_connector
     image: smart-open-air-garden-device-connector
