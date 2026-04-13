@@ -1,6 +1,6 @@
 {
     "_": {
-        "menu-menu-item-sidebar": false,
+        "menu-menu-item-sidebar": true,
         "debug": {
             "filter": "filterAll"
         },
