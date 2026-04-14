@@ -58,6 +58,40 @@
                 "telemetry_topic": "garden/RPi_003/telemetry",
                 "command_topic": "garden/RPi_003/pump"
             }
+        },
+        {
+            "deviceID": "Rpi__006",
+            "deviceName": "GardenGateway_006",
+            "status": "active",
+            "sensors": [
+                "SoilMoisture",
+                "DHT11"
+            ],
+            "actuators": [
+                "MicroServoPump"
+            ],
+            "config": {
+                "clientID": "Client_Rpi__006",
+                "telemetry_topic": "garden/Rpi__006/telemetry",
+                "command_topic": "garden/Rpi__006/pump"
+            }
+        },
+        {
+            "deviceID": "RPi_006",
+            "deviceName": "GardenGateway_006",
+            "status": "active",
+            "sensors": [
+                "SoilMoisture",
+                "DHT11"
+            ],
+            "actuators": [
+                "MicroServoPump"
+            ],
+            "config": {
+                "clientID": "Client_RPi_006",
+                "telemetry_topic": "garden/RPi_006/telemetry",
+                "command_topic": "garden/RPi_006/pump"
+            }
         }
     ],
     "servicesList": [
@@ -170,7 +204,7 @@
         {
             "userID": "U_002",
             "userName": "Mario",
-            "telegramChatID": "000000002"
+            "telegramChatID": "702533055"
         },
         {
             "userID": "U_003",
@@ -223,6 +257,13 @@
             "plantID": "P4",
             "deviceID": "RPi_003",
             "slotName": "Zona S5",
+            "status": "active"
+        },
+        {
+            "slotID": "S9",
+            "plantID": "P7",
+            "deviceID": "RPi_003",
+            "slotName": "Zona S9",
             "status": "active"
         }
     ]
