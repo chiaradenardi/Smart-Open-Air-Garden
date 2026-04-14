@@ -31,6 +31,7 @@ BROKER_PORT = int(os.getenv("BROKER_PORT", 1883))
 MINUTI_PER_ACCENSIONE = 5
 LITRI_AL_MINUTO = 2
 MINUTI_TIMER_FISSO_AL_GIORNO = 15
+PREZZO_ACQUA_PER_LITRO = 0.004  # €/litro (media nazionale italiana)
 
 # ==================== MQTT CLIENT ====================
 mqtt_client = mqtt.Client("statistics-service")
@@ -89,7 +90,7 @@ def get_pump_history(period: str = "7d") -> list:
 
 
 def calculate_water_savings(pump_history: list) -> dict:
-    """Calcola il risparmio idrico."""
+    """Calcola il risparmio idrico e il risparmio economico."""
     accensioni_smart = sum(1 for dato in pump_history if dato.get("value") == 1)
     
     minuti_smart_totali = accensioni_smart * MINUTI_PER_ACCENSIONE
@@ -102,6 +103,9 @@ def calculate_water_savings(pump_history: list) -> dict:
     litri_risparmiati = litri_fissi - litri_smart
     percentuale_risparmio = round((litri_risparmiati / litri_fissi) * 100, 1) if litri_fissi > 0 else 0
     
+    # 💶 Calcolo risparmio economico
+    euro_risparmiati = round(litri_risparmiati * PREZZO_ACQUA_PER_LITRO, 2)
+    
     return {
         "pump_activations_smart": accensioni_smart,
         "minutes_used_smart": minuti_smart_totali,
@@ -109,7 +113,9 @@ def calculate_water_savings(pump_history: list) -> dict:
         "minutes_fixed_timer": minuti_timer_fisso_totali,
         "liters_fixed_timer": litri_fissi,
         "liters_saved": litri_risparmiati,
-        "savings_percentage": percentuale_risparmio
+        "savings_percentage": percentuale_risparmio,
+        "euros_saved": euro_risparmiati,
+        "cost_per_liter": PREZZO_ACQUA_PER_LITRO
     }
 
 

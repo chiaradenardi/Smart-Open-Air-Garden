@@ -18,9 +18,6 @@ services:
       - message-broker
     volumes:
       - ./node_red_data:/data
-      # Named volume per node_modules: garantisce che le dipendenze (dashboard, etc)
-      # siano disponibili anche dopo il montaggio del volume locale
-      - node_red_modules:/data/node_modules
   
   #*****************************************************************************************
   # --- AGGIUNTO DA Davide 12/03/2026: Il Database ---
@@ -117,6 +114,15 @@ services:
       - service-catalog
     restart: always
 
+  fault-detection-service:
+    build: ./fault-detection-service
+    container_name: fault-detection-service
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - message-broker
+    restart: always
+
   device-connector:
     build: ./device_connector
     image: smart-open-air-garden-device-connector
@@ -129,5 +135,30 @@ services:
       - service-catalog
     restart: always
 
+  device-connector-02:
+    build: ./device_connector
+    image: smart-open-air-garden-device-connector
+    container_name: device-connector-02
+    environment:
+      - CATALOG_URL=http://service-catalog:8080/broker
+      - DEVICE_ID=RPi_002
+    depends_on:
+      - message-broker
+      - service-catalog
+    restart: always
+
+  device-connector-03:
+    build: ./device_connector
+    image: smart-open-air-garden-device-connector
+    container_name: device-connector-03
+    environment:
+      - CATALOG_URL=http://service-catalog:8080/broker
+      - DEVICE_ID=RPi_003
+    depends_on:
+      - message-broker
+      - service-catalog
+    restart: always
+
 volumes:
+  node_red_data:
   node_red_modules:

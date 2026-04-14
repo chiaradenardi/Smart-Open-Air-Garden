@@ -81,8 +81,8 @@ if __name__ == "__main__":
     device_id = os.getenv("DEVICE_ID", "RPi_001")
     # In device_connector.py, modifica queste righe nel main:
     broker_ip = broker_config.get("broker_name", "message-broker") # Usa broker_name, non broker_ip
-    telemetry_topic = broker_config.get("telemetry_topic", "garden/sensors/telemetry")
-    command_topic = broker_config.get("command_topic", "garden/actuators/pump")
+    telemetry_topic = f"garden/{device_id}/telemetry"  # Include device_id for multi-plant support
+    command_topic = f"garden/{device_id}/pump"  # Include device_id for multi-plant support
     
     # 2. Setup MQTT Client and connect to the broker
     client = mqtt.Client(userdata={'command_topic': command_topic})
