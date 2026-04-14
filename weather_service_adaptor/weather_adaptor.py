@@ -9,7 +9,7 @@ class WeatherAdaptor:
     def GET(self, *uri, **params):
         # 1. Recupero dati sensibili dalle variabili d'ambiente Docker
         api_key = os.getenv('TOMORROW_API_KEY', 'vl2kNb5ZvcIWSMqS7oGfKgOzLTOd7FXf')
-        location = os.getenv('CITY_NAME', 'Turin')
+        location = os.getenv('CITY_NAME', '45.0703,7.6869')
         
         # URL per previsioni orarie (Hourly)
         url = f"https://api.tomorrow.io/v4/weather/forecast?location={location}&apikey={api_key}"

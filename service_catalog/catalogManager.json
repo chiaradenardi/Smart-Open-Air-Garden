@@ -200,7 +200,7 @@
         {
             "slotID": "S1",
             "slotName": "Orto Nord",
-            "plantID": "P4",
+            "plantID": "P1",
             "deviceID": "RPi_001",
             "status": "active"
         },
