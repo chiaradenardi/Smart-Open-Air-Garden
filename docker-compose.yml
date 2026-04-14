@@ -44,7 +44,7 @@ services:
     container_name: weather-service-adaptor
     environment:
       - TOMORROW_API_KEY=vl2kNb5ZvcIWSMqS7oGfKgOzLTOd7FXf
-      - CITY_NAME=Turin
+      - CITY_NAME=44.6458,10.9257
     ports:
       - "8085:8085"
     depends_on:
