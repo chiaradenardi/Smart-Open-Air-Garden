@@ -175,7 +175,7 @@
         {
             "userID": "U_003",
             "userName": "Luigi",
-            "telegramChatID": "000000003"
+            "telegramChatID": "533057256"
         }
     ],
     "irrigation_strategies": {
@@ -200,7 +200,7 @@
         {
             "slotID": "S1",
             "slotName": "Orto Nord",
-            "plantID": "P1",
+            "plantID": "P4",
             "deviceID": "RPi_001",
             "status": "active"
         },
@@ -216,6 +216,13 @@
             "plantID": "P3",
             "deviceID": "RPi_003",
             "slotName": "Zona S3",
+            "status": "active"
+        },
+        {
+            "slotID": "S5",
+            "plantID": "P4",
+            "deviceID": "RPi_003",
+            "slotName": "Zona S5",
             "status": "active"
         }
     ]
