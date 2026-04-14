@@ -99,18 +99,37 @@ class SlotsEndpoint:
         data=json.load(f)
         trovato=False
         f.close()
+        
+        # Controllo 1: Verifica se lo slotID è già in uso
         for i in data["garden_slots"]:
             if body_json["slotID"]==i["slotID"]:
                 trovato=True
                 break
         if trovato:
             return json.dumps({"error":"SLOT ID already in the system"})
-        else:
-            data["garden_slots"].append(body_json)
-            file=open("catalogManager.json","w")
-            json.dump(data,file,indent=4)
-            file.close()
-            return json.dumps({"result":"SLOT successfully added"})
+        
+        # Controllo 2: Verifica se il deviceID è già assegnato a un altro slot
+        device_already_used = False
+        device_used_by_slot = None
+        for slot in data["garden_slots"]:
+            if body_json["deviceID"] == slot["deviceID"]:
+                device_already_used = True
+                device_used_by_slot = slot["slotID"]
+                break
+        
+        if device_already_used:
+            return json.dumps({
+                "error": f"Device '{body_json['deviceID']}' is already in use by slot '{device_used_by_slot}'",
+                "deviceID": body_json["deviceID"],
+                "used_by_slot": device_used_by_slot
+            }, indent=4)
+        
+        # Se tutti i controlli passano, aggiungi lo slot
+        data["garden_slots"].append(body_json)
+        file=open("catalogManager.json","w")
+        json.dump(data,file,indent=4)
+        file.close()
+        return json.dumps({"result":"SLOT successfully added"})
     
     def DELETE(self,*uri,**params):     
         f=open("catalogManager.json","r")
