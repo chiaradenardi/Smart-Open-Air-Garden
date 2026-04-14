@@ -28,23 +28,40 @@ class WeatherAdaptor:
             hourly_data = data.get('timelines', {}).get('hourly', [])
             print(f"[ADAPTOR] Trovate {len(hourly_data)} ore di previsioni")
 
-            total_rain_6h = 0
+            total_rain_accumulation_6h = 0
+            max_precip_probability_6h = 0
             for hour in hourly_data[:6]:
                 values = hour.get('values', {})
-                rain_intensity = values.get('precipitationIntensity', 0)
-                total_rain_6h += rain_intensity
+
+                # 1. Accumulo di pioggia (somma totale nelle 6 ore)
+                rain_acc = values.get('rainAccumulation', 0)
+                # Fallback di sicurezza: se rainAccumulation è None, usa 0
+                if rain_acc is not None: 
+                    total_rain_accumulation_6h += rain_acc
+                
+                # 2. Probabilità di precipitazione (cerchiamo il picco massimo nelle 6 ore)
+                precip_prob = values.get('precipitationProbability', 0)
+                if precip_prob is not None and precip_prob > max_precip_probability_6h:
+                    max_precip_probability_6h = precip_prob
             
-            print(f"[ADAPTOR] Pioggia totale calcolata (6h): {total_rain_6h} mm") # QUESTO LO VEDRAI IN DOCKER
+            print(f"[ADAPTOR] Probabilità pioggia massima (6h): {max_precip_probability_6h}%")
+            print(f"[ADAPTOR] Accumulo pioggia calcolato (6h): {round(total_rain_accumulation_6h, 2)} mm")
             
             result = {
-                "rain_6h": round(total_rain_6h, 2),
+                "max_precipitation_probability_6h": max_precip_probability_6h,
+                "total_rain_accumulation_6h": round(total_rain_accumulation_6h, 2),
                 "location": location,
                 "status": "success"
             }
             return json.dumps(result)
 
+        except requests.exceptions.RequestException as e:
+            cherrypy.response.status = 500
+            print(f"[ADAPTOR] Errore di rete: {e}")
+            return json.dumps({"status": "error", "message": "Errore di connessione API Tomorrow.io"})
         except Exception as e:
             cherrypy.response.status = 500
+            print(f"[ADAPTOR] Errore interno: {e}")
             return json.dumps({"status": "error", "message": str(e)})
 
 
