@@ -105,6 +105,8 @@ def handle_start(message):
     btn_profilo = telebot.types.InlineKeyboardButton("👤 Collega Profilo (Ricevi Notifiche)", callback_data="menu_profilo")
     markup.add(btn_profilo)
     
+    btn_posizione = telebot.types.InlineKeyboardButton("🌍 Imposta Posizione Meteo", callback_data="menu_posizione")
+    markup.add(btn_posizione) # Aggiungiamo il bottone alla fine
     bot.reply_to(message, benvenuto, reply_markup=markup, parse_mode="Markdown")
 
 # --- ROUTER DEL MENU ---
@@ -127,10 +129,28 @@ def handle_main_menu(call):
         handle_soglie(call.message)
     elif comando == "profilo":
         handle_profilo(call.message) # Aggiungi questa riga
+    elif comando == "posizione": # AGGIUNGI QUESTE DUE RIGHE
+        handle_menu_posizione(call.message)
+
+def handle_menu_posizione(message):
+    # Creiamo la tastiera "Reply" (in basso) che ha i permessi per il GPS
+    markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    btn_pos = telebot.types.KeyboardButton("📍 Invia la mia posizione GPS", request_location=True)
+    markup.add(btn_pos)
+    
+    testo = (
+        "🌍 *Impostazione Posizione Meteo*\n\n"
+        "Premi il pulsante qui sotto per inviare al sistema le tue coordinate GPS esatte.\n\n"
+        "💡 _Se il giardino si trova in un'altra città, scrivi semplicemente il comando testuale:_\n"
+        "`/citta NomeCitta,IT` (es. `/citta Torino,IT`)"
+    )
+    bot.send_message(message.chat.id, testo, reply_markup=markup, parse_mode="Markdown")
  
 
 @bot.message_handler(commands=['coltura'])
 @bot.message_handler(commands=['coltura'])
+
+
 def handle_coltura(message):
     try:
         # 1. Chiediamo al catalogo la lista AGGIORNATA degli slot
@@ -686,6 +706,51 @@ def process_del_user(call):
             bot.send_message(call.message.chat.id, f"🗑️ Utente `{user_id}` rimosso dal database.", parse_mode="Markdown")
     except Exception as e:
         bot.send_message(call.message.chat.id, f"❌ Errore: {e}")
+
+# --- 10. GESTIONE POSIZIONE METEO ---
+
+# OPZIONE A: Posizione Testuale (es. /citta Torino,IT)
+@bot.message_handler(commands=['citta'])
+def handle_citta(message):
+    msg = bot.send_message(message.chat.id, "🌍 *Imposta Città Meteo*\nScrivi il nome della città (es. `Torino,IT`) o le coordinate (es. `45.07,7.68`):", parse_mode="Markdown")
+    bot.register_next_step_handler(msg, process_citta)
+
+def process_citta(message):
+    nuova_posizione = message.text.strip()
+    try:
+        requests.put(f"{CATALOG_REST_URL}/location", json={"location": nuova_posizione}, timeout=5).raise_for_status()
+        bot.send_message(message.chat.id, f"✅ Posizione meteo aggiornata a: *{nuova_posizione}*", parse_mode="Markdown")
+    except Exception as e:
+        bot.send_message(message.chat.id, f"❌ Errore aggiornamento posizione: {e}")
+
+# OPZIONE B: Posizione GPS con il tasto speciale di Telegram
+@bot.message_handler(commands=['posizione'])
+def handle_gps_location(message):
+    # Creiamo una tastiera "Reply" (quelle in basso) con un bottone speciale nativo di Telegram
+    markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    btn_pos = telebot.types.KeyboardButton("📍 Invia la mia posizione GPS", request_location=True)
+    markup.add(btn_pos)
+    
+    bot.send_message(message.chat.id, "Premi il pulsante qui sotto per inviare le tue coordinate GPS esatte per il servizio Meteo:", reply_markup=markup)
+
+# Questo handler scatta in automatico quando l'utente preme il bottone GPS
+@bot.message_handler(content_types=['location'])
+def handle_received_location(message):
+    lat = message.location.latitude
+    lon = message.location.longitude
+    nuova_posizione = f"{lat},{lon}"
+    
+    try:
+        requests.put(f"{CATALOG_REST_URL}/location", json={"location": nuova_posizione}, timeout=5).raise_for_status()
+        # Rimuoviamo la tastiera speciale e diamo conferma
+        bot.send_message(
+            message.chat.id, 
+            f"✅ Posizione GPS ricevuta e salvata!\nCoordinate: `{nuova_posizione}`\nL'irrigazione ora controllerà il meteo per questa zona.", 
+            parse_mode="Markdown", 
+            reply_markup=telebot.types.ReplyKeyboardRemove()
+        )
+    except Exception as e:
+        bot.send_message(message.chat.id, f"❌ Errore aggiornamento posizione: {e}")
 
 if __name__ == "__main__":
     # 1. Setup MQTT in background
