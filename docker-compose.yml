@@ -109,6 +109,7 @@ services:
     environment:
       - BROKER_IP=message-broker
       - SLOTS_URL=http://service-catalog:8080/slots
+      - CATALOG_URL=http://service-catalog:8080
     depends_on:
       - message-broker
       - service-catalog

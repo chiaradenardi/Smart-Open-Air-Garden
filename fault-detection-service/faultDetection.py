@@ -32,7 +32,7 @@ TOPIC_TELEMETRY = "garden/+/telemetry" # In ascolto: dati sensori (umidità)
 TOPIC_ALARMS = "garden/alerts/faults"  # In pubblicazione: allarmi
 
 # Configurazione timeout
-PUMP_TIMEOUT_SECONDS = 15  # 5 minuti - tempo massimo per vedere aumento umidità
+PUMP_TIMEOUT_SECONDS = 15  # tempo massimo per vedere aumento umidità
 MOISTURE_INCREASE_THRESHOLD = 1.0  # Minimo aumento percentuale per considerare ok
 PERIODIC_CHECK_INTERVAL = 60  # Controllo periodico ogni 60 secondi
 
