@@ -51,8 +51,23 @@ def on_message(client, userdata, msg):
                 testo = f"💧 *Aggiornamento Pompa:*\n{payload_raw}"
         
         elif "faults" in msg.topic:
-            testo = f"🚨 *ALLARME CRITICO!*\n{payload_raw}"
-        
+            try:
+                # Spacchettiamo il JSON per evitare i problemi di formattazione
+                fault_data = json.loads(payload_raw)
+                device = fault_data.get("device", "Ignoto")
+                desc = fault_data.get("description", "Guasto sconosciuto")
+                severity = fault_data.get("severity", "ALTA")
+                
+                testo = (
+                    f"🚨 *ALLARME CRITICO!* 🚨\n\n"
+                    f"📟 *Dispositivo:* `{device}`\n"
+                    f"⚠️ *Gravità:* {severity}\n"
+                    f"📝 *Dettaglio:* {desc}"
+                )
+            except:
+                # Fallback di sicurezza: se non è JSON, lo mettiamo in un blocco di codice sicuro
+                testo = f"🚨 *ALLARME CRITICO!*\n```text\n{payload_raw}\n```"
+                
         else:
             testo = f"ℹ️ *Notifica Sistema:*\n{payload_raw}"
 
