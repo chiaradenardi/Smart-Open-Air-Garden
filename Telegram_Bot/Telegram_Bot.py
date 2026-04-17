@@ -131,10 +131,7 @@ def handle_main_menu(call):
         handle_profilo(call.message) # Aggiungi questa riga
     elif comando == "posizione": # AGGIUNGI QUESTE DUE RIGHE
         handle_menu_posizione(call.message)
- 
 
-@bot.message_handler(commands=['coltura'])
-@bot.message_handler(commands=['coltura'])
 def handle_menu_posizione(message):
     # Creiamo la tastiera "Reply" (in basso) che ha i permessi per il GPS
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
@@ -148,7 +145,12 @@ def handle_menu_posizione(message):
         "`/citta NomeCitta,IT` (es. `/citta Torino,IT`)"
     )
     bot.send_message(message.chat.id, testo, reply_markup=markup, parse_mode="Markdown")
-    
+ 
+
+@bot.message_handler(commands=['coltura'])
+@bot.message_handler(commands=['coltura'])
+
+
 def handle_coltura(message):
     try:
         # 1. Chiediamo al catalogo la lista AGGIORNATA degli slot
