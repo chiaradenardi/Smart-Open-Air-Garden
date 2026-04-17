@@ -520,6 +520,31 @@ class LocationEndpoint:
             json.dump(data, f, indent=4)
             
         return json.dumps({"result": "Location successfully updated", "location": data["garden_location"]}, indent=4)
+    
+#******************************************************************************************
+# GRID API REST (Dimensioni Giardino)
+#******************************************************************************************
+class GridEndpoint:
+    exposed = True
+    def GET(self):
+        with open("catalogManager.json", "r") as f:
+            data = json.load(f)
+        return json.dumps(data.get("garden_grid", {"max_pumps": 3, "max_taps": 3}), indent=4)
+
+    def PUT(self):
+        body = cherrypy.request.body.read().decode('utf-8')
+        body_json = json.loads(body)
+        
+        with open("catalogManager.json", "r") as f:
+            data = json.load(f)
+            
+        data["garden_grid"]["max_pumps"] = body_json.get("max_pumps", data["garden_grid"]["max_pumps"])
+        data["garden_grid"]["max_taps"] = body_json.get("max_taps", data["garden_grid"]["max_taps"])
+        
+        with open("catalogManager.json", "w") as f:
+            json.dump(data, f, indent=4)
+            
+        return json.dumps({"result": "Grid updated", "garden_grid": data["garden_grid"]}, indent=4)
 
 class CatalogRoot: #empty class which contains all the endpoints
     pass                     
@@ -538,6 +563,7 @@ if __name__=="__main__":
     root.users = UsersEndpoint()            
     root.strategies = StrategiesEndpoint()  
     root.location = LocationEndpoint()
+    root.grid = GridEndpoint()
 
 
 

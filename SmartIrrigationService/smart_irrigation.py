@@ -86,7 +86,10 @@ class SmartIrrigation:
                     rain_6h = 0
                     try:
                         weather_res = requests.get(self.weather_adaptor_url, timeout=5).json()
-                        rain_6h = weather_res.get("rain_6h", 0)
+                        rain_6h = weather_res.get("total_rain_accumulation_6h", 0)
+                        # 2. TRUCCO STRESS TEST: Fingiamo che stia arrivando il diluvio universale! 🌧️
+                        # (Così non dobbiamo aspettare che piova davvero a Torino/Modena)
+                        #rain_6h = 50.0
                     except Exception as e:
                         print(f"  [!] Errore Meteo: {e}. Procedo con l'irrigazione di sicurezza.")
 

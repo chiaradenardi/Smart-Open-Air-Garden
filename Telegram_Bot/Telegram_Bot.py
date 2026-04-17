@@ -75,12 +75,14 @@ def on_message(client, userdata, msg):
 def handle_start(message):
     global user_chat_id
     user_chat_id = message.chat.id  # Salviamo l'ID per le notifiche MQTT
+
     
     benvenuto = (
         "🌱 *Smart Open Air Garden - Pannello di Controllo* 🌱\n\n"
         "Benvenuto nel tuo ecosistema IoT. Da qui puoi monitorare i sensori, "
         "gestire le irrigazioni e tenere sotto controllo i consumi.\n\n"
-        "Scegli un'opzione dal menu rapido qui sotto, oppure usa i comandi testuali:\n\n"
+        "🗺️ *Mappa e Griglia:*\n"
+        "📐 `/dimensionigiardino` | 🌱 `/giardino` \n\n"
         "🔧 *Gestione Avanzata (Admin):*\n"
         "➕ `/aggiungislot` | ➖ `/rimuovislot`\n"
         "➕ `/aggiungidevice` | ➖ `/rimuovidevice`\n"
@@ -148,7 +150,7 @@ def handle_menu_posizione(message):
  
 
 @bot.message_handler(commands=['coltura'])
-@bot.message_handler(commands=['coltura'])
+
 
 
 def handle_coltura(message):
@@ -177,17 +179,17 @@ def handle_coltura(message):
         bot.send_message(message.chat.id, f"❌ Errore nel contattare il Catalogo: {e}")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("slot_"))
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("slot_"))
 def handle_slot_selection(call):
-    selected_slot = call.data.split("_")[1]
+    # INVECE di usare lo split che taglia le parole, "cancelliamo" solo la parola "slot_" 
+    # Così se arriva "slot_P1_R1", rimane esattamente "P1_R1" intatto!
+    selected_slot = call.data.replace("slot_", "")
     
     try:
-        # Recuperiamo la lista aggiornata delle piante disponibili!
         strategies = requests.get(f"{CATALOG_REST_URL}/strategies", timeout=5).json()
         
         markup = telebot.types.InlineKeyboardMarkup()
-        
-        # Creiamo un bottone per ogni pianta in archivio
         for plant_id, info in strategies.items():
             btn = telebot.types.InlineKeyboardButton(f"🪴 {info['name']}", callback_data=f"plant_{plant_id}_{selected_slot}")
             markup.add(btn)
@@ -197,11 +199,16 @@ def handle_slot_selection(call):
     except Exception as e:
         bot.send_message(call.message.chat.id, f"❌ Errore nel caricare le piante: {e}")
 
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("plant_"))
 @bot.callback_query_handler(func=lambda call: call.data.startswith("plant_"))
 def handle_crop_selection(call):
-    parts = call.data.split("_")
-    plant_id = parts[1]      # Ora passiamo direttamente P1, P2 o P3!
-    selected_slot = parts[2] # S1, S2, ecc. 
+    # Esempio di cosa ci arriva: "plant_P3_P1_R1"
+    stringa_dati = call.data.replace("plant_", "") # Diventa "P3_P1_R1"
+    pezzi = stringa_dati.split("_")
+    
+    plant_id = pezzi[0] # Prende "P3"
+    selected_slot = "_".join(pezzi[1:]) # Prende tutto il resto e lo riunisce (es. "P1_R1")
     
     bot.answer_callback_query(call.id, f"Sto aggiornando il sistema...")
     
@@ -210,7 +217,14 @@ def handle_crop_selection(call):
             "slotID": selected_slot,
             "plantID": plant_id
         }
-        requests.put(STRATEGY_REST_URL, json=payload, timeout=5).raise_for_status()
+        
+        response = requests.put(STRATEGY_REST_URL, json=payload, timeout=5)
+        response.raise_for_status()
+        
+        data_res = response.json()
+        if "error" in data_res:
+            bot.send_message(call.message.chat.id, f"❌ Errore dal database: {data_res['error']}")
+            return
         
         # --- Aggiorniamo la risposta finale ---
         slots_data = requests.get(STRATEGY_REST_URL, timeout=5).json()
@@ -219,7 +233,6 @@ def handle_crop_selection(call):
         dettaglio_slot = []
         for slot in slots_data:
             id_pianta = slot.get("plantID")
-            # Andiamo a cercare il vero nome della pianta nel dizionario strategies_data
             nome_pianta = "sconosciuta"
             if id_pianta in strategies_data:
                 nome_pianta = strategies_data[id_pianta]["name"]
@@ -241,46 +254,44 @@ def handle_crop_selection(call):
 def handle_add_slot(message):
     testo = (
         "🌱 *Aggiungi un nuovo Slot* 🌱\n"
-        "Per aggiungere una nuova zona, scrivimi i dati separati da una virgola in questo formato:\n\n"
-        "`ID Slot, ID Pianta, ID Dispositivo`\n\n"
-        "Esempio: *S3, P1, RPi_003*"
+        "Per coltivare una zona, scrivimi la coordinata sulla griglia, l'ID della Pianta e l'ID del Dispositivo separati da virgola:\n\n"
+        "`Coordinata, ID Pianta, ID Dispositivo`\n\n"
+        "Esempio: *P1_R2, P3, RPi_003*\n"
+        "_(Usa /giardino per vedere le coordinate libere)_"
     )
     msg = bot.send_message(message.chat.id, testo, parse_mode="Markdown")
-    # Mettiamo il bot in attesa dei dati digitati dall'utente
     bot.register_next_step_handler(msg, process_add_slot)
 
 def process_add_slot(message):
     try:
-        # Puliamo il testo e lo dividiamo usando la virgola
         parts = [x.strip() for x in message.text.split(',')]
         
-        # 1. Controllo formato testuale
         if len(parts) != 3:
-            bot.send_message(message.chat.id, "❌ Errore di formato. Devi inserire 3 valori separati da virgola. Riprova con /aggiungislot")
+            bot.send_message(message.chat.id, "❌ Errore di formato. Devi inserire 3 valori separati da virgola.\nEsempio: P1_R2, P3, RPi_003")
             return
             
         slot_id, plant_id, device_id = parts
+        slot_id = slot_id.upper() # Forza il maiuscolo per evitare errori (es. p1_r2 diventa P1_R2)
         
-        # --- 2. CONTROLLO DI INTEGRITÀ (La novità!) ---
+        # Validazione della coordinata: deve iniziare con P e contenere _R
+        if not slot_id.startswith("P") or "_R" not in slot_id:
+            bot.send_message(message.chat.id, "❌ Errore: La coordinata dello slot deve essere nel formato Px_Ry (es. P1_R2). Riprova con /aggiungislot.")
+            return
+        
         # Chiediamo al catalogo la lista dei device esistenti
         devices_list = requests.get(f"{CATALOG_REST_URL}/devices", timeout=5).json()
-        
-        # Estraiamo solo gli ID per fare un controllo veloce
         registered_device_ids = [d["deviceID"] for d in devices_list]
         
-        # Se il device_id inserito non è nella lista, blocchiamo tutto!
         if device_id not in registered_device_ids:
             bot.send_message(
                 message.chat.id, 
                 f"🛑 *Alt!* Il dispositivo `{device_id}` non esiste nel sistema.\n\n"
-                f"Devi prima registrare l'hardware usando il comando /aggiungidevice.\n"
-                f"Solo dopo potrai assegnarlo allo slot {slot_id}.", 
+                f"Devi prima registrare l'hardware usando il comando /aggiungidevice.", 
                 parse_mode="Markdown"
             )
             return
-        # ----------------------------------------------
         
-        # 3. Se il device esiste, procediamo con la creazione dello slot
+        # Creazione dello slot
         payload = {
             "slotID": slot_id,
             "plantID": plant_id,
@@ -296,11 +307,15 @@ def process_add_slot(message):
         if "error" in data:
             bot.send_message(message.chat.id, f"❌ Errore dal server: {data['error']}")
         else:
-            bot.send_message(message.chat.id, f"✅ *Successo!* Il nuovo slot `{slot_id}` è stato creato e il dispositivo `{device_id}` gli è stato assegnato correttamente.", parse_mode="Markdown")
+            # Stampiamo il successo e la griglia AGGIORNATA
+            bot.send_message(
+                message.chat.id, 
+                f"✅ *Successo!* Il dispositivo `{device_id}` sta ora irrigando la zona `{slot_id}`.\n\nEcco il tuo giardino aggiornato:\n\n{genera_griglia_testo()}", 
+                parse_mode="Markdown"
+            )
             
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Errore di connessione: {e}")
-
 # COMANDO: RIMUOVI SLOT (DELETE)
 @bot.message_handler(commands=['rimuovislot'])
 def handle_remove_slot(message):
@@ -751,6 +766,93 @@ def handle_received_location(message):
         )
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Errore aggiornamento posizione: {e}")
+
+# --- GESTIONE VISIVA DEL GIARDINO (GRIGLIA) ---
+
+
+def genera_griglia_testo():
+    """Genera la griglia visiva usando le Emoji di Telegram"""
+    try:
+        grid_data = requests.get(f"{CATALOG_REST_URL}/grid", timeout=5).json()
+        slots_data = requests.get(STRATEGY_REST_URL, timeout=5).json()
+        
+        max_pumps = grid_data.get("max_pumps", 3)
+        max_taps = grid_data.get("max_taps", 3)
+        
+        slot_occupati = [s.get("slotID") for s in slots_data if s.get("status") == "active"]
+
+        # Costruiamo l'intestazione superiore (R1, R2, ecc.)
+        griglia_str = "      " # Spazio iniziale per allineare
+        for r in range(1, max_taps + 1):
+            griglia_str += f"R{r}  "
+        griglia_str += "\n"
+
+        # Disegniamo la terra e le piante
+        for p in range(1, max_pumps + 1):
+            riga = f"*P{p}* " # Mettiamo P1, P2 in grassetto
+            for r in range(1, max_taps + 1):
+                coordinata = f"P{p}_R{r}"
+                
+                if coordinata in slot_occupati:
+                    riga += "🌱  " # Piantina (Occupato)
+                else:
+                    riga += "🟫  " # Terra (Libero)
+                    
+            griglia_str += riga + "\n"
+
+        # Aggiungiamo una piccola legenda in fondo
+        legenda = "\n_Legenda:_  🌱 `Occupato`  |  🟫 `Libero`"
+        
+        # NOTA: Niente più backtick (```), inviamo direttamente il testo formattato!
+        return griglia_str + legenda
+        
+    except Exception as e:
+        return f"Errore caricamento griglia: {e}"
+
+
+# COMANDO: IMPOSTA DIMENSIONI GIARDINO
+@bot.message_handler(commands=['dimensionigiardino'])
+def handle_set_dimensions(message):
+    testo = (
+        "📐 *Imposta le dimensioni del Giardino*\n"
+        "Scrivi il numero di Filoni (Pompe) e il numero di Rubinetti (Piante) per filone, "
+        "separati da una virgola.\n\n"
+        "Esempio: *3, 4* (3 Filoni, 4 Piante ciascuno)"
+    )
+    msg = bot.send_message(message.chat.id, testo, parse_mode="Markdown")
+    bot.register_next_step_handler(msg, process_set_dimensions)
+
+def process_set_dimensions(message):
+    try:
+        parts = [int(x.strip()) for x in message.text.split(',')]
+        if len(parts) != 2:
+            raise ValueError()
+        
+        # Invia le nuove dimensioni al Catalogo
+        payload = {"max_pumps": parts[0], "max_taps": parts[1]}
+        requests.put(f"{CATALOG_REST_URL}/grid", json=payload, timeout=5).raise_for_status()
+        
+        bot.send_message(
+            message.chat.id, 
+            f"✅ Dimensioni aggiornate!\nEcco il tuo nuovo giardino:\n{genera_griglia_testo()}", 
+            parse_mode="Markdown" 
+        )
+    except ValueError:
+        bot.send_message(message.chat.id, "❌ Formato non valido. Usa solo numeri (es. 3, 4).")
+    except Exception as e:
+        bot.send_message(message.chat.id, f"❌ Errore aggiornamento DB: {e}")
+
+# COMANDO: VISUALIZZA GIARDINO
+@bot.message_handler(commands=['giardino'])
+def handle_show_garden(message):
+    bot.send_message(
+        message.chat.id, 
+        f"🌱 *Mappa del tuo Giardino:*\n{genera_griglia_testo()}", 
+        parse_mode="Markdown"
+    )
+
+
+
 
 if __name__ == "__main__":
     # 1. Setup MQTT in background

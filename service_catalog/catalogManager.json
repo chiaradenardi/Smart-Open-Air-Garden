@@ -5,6 +5,10 @@
         "port": 1883
     },
     "waterPricePerM3": 2.5,
+    "garden_grid": {
+        "max_pumps": 5,
+        "max_taps": 5
+    },
     "devicesList": [
         {
             "deviceID": "RPi_001",
@@ -228,50 +232,34 @@
         "P4": {
             "name": "Cipolla",
             "min_moisture_threshold": 60.0
+        },
+        "P5": {
+            "name": "Cavolo",
+            "min_moisture_threshold": 30.0
         }
     },
     "garden_slots": [
         {
-            "slotID": "S1",
+            "slotID": "P1_R1",
             "slotName": "Orto Nord",
-            "plantID": "P1",
+            "plantID": "P4",
             "deviceID": "RPi_001",
             "status": "active"
         },
         {
-            "slotID": "S2",
-            "slotName": "Balcone Sud",
-            "plantID": "P2",
-            "deviceID": "RPi_002",
-            "status": "active"
-        },
-        {
-            "slotID": "S3",
+            "slotID": "P1_R2",
             "plantID": "P3",
             "deviceID": "RPi_003",
-            "slotName": "Zona S3",
+            "slotName": "Zona P1_R2",
             "status": "active"
         },
         {
-            "slotID": "S5",
-            "plantID": "P4",
-            "deviceID": "RPi_003",
-            "slotName": "Zona S5",
-            "status": "active"
-        },
-        {
-            "slotID": "S9",
-            "plantID": "P7",
-            "deviceID": "RPi_003",
-            "slotName": "Zona S9",
-            "status": "active"
-        },
-        {
-            "slotID": "S6",
-            "plantID": "P6",
-            "deviceID": "RPi_006",
-            "slotName": "Zona S6",
+            "slotID": "P5_R5",
+            "plantID": "P5",
+            "deviceID": "RPi_002",
+            "slotName": "Zona P5_R5",
             "status": "active"
         }
-    ]
+    ],
+    "garden_location": "45.063006,7.661269"
 }
