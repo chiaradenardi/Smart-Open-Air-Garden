@@ -265,6 +265,13 @@
             "deviceID": "RPi_003",
             "slotName": "Zona S9",
             "status": "active"
+        },
+        {
+            "slotID": "S6",
+            "plantID": "P6",
+            "deviceID": "RPi_006",
+            "slotName": "Zona S6",
+            "status": "active"
         }
     ]
 }

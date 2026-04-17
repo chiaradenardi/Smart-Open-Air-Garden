@@ -492,6 +492,34 @@ class StrategiesEndpoint:
             else:
                 return json.dumps({"error":"STRATEGY ID not found"})
         return json.dumps({"error": "Missing STRATEGY ID in the URL"}, indent=4)
+    
+#******************************************************************************************
+# LOCATION API REST (Per il Meteo)
+#******************************************************************************************
+class LocationEndpoint:
+    exposed = True
+    def GET(self):
+        with open("catalogManager.json", "r") as f:
+            data = json.load(f)
+        # Se non c'è ancora una posizione salvata, restituisce un valore di default
+        location = data.get("garden_location", "44.6458,10.9257") 
+        return json.dumps({"location": location}, indent=4)
+
+    def PUT(self):
+        body = cherrypy.request.body.read().decode('utf-8')
+        body_json = json.loads(body)
+        if "location" not in body_json:
+            return json.dumps({"error": "Missing 'location' parameter"}, indent=4)
+            
+        with open("catalogManager.json", "r") as f:
+            data = json.load(f)
+            
+        data["garden_location"] = body_json["location"]
+        
+        with open("catalogManager.json", "w") as f:
+            json.dump(data, f, indent=4)
+            
+        return json.dumps({"result": "Location successfully updated", "location": data["garden_location"]}, indent=4)
 
 class CatalogRoot: #empty class which contains all the endpoints
     pass                     
@@ -509,6 +537,7 @@ if __name__=="__main__":
     root.services = ServicesEndpoint()      
     root.users = UsersEndpoint()            
     root.strategies = StrategiesEndpoint()  
+    root.location = LocationEndpoint()
 
 
 

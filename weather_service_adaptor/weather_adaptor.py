@@ -7,15 +7,23 @@ class WeatherAdaptor:
     exposed = True
 
     def GET(self, *uri, **params):
-        # 1. Recupero dati sensibili dalle variabili d'ambiente Docker
+        # 1. Recupero la API KEY dalle variabili d'ambiente (questa rimane fissa)
         api_key = os.getenv('TOMORROW_API_KEY', 'vl2kNb5ZvcIWSMqS7oGfKgOzLTOd7FXf')
-        location = os.getenv('CITY_NAME', '44.6458,10.9257')
+        
+        # 2. CHIEDIAMO LA POSIZIONE AL CATALOGO (DINAMICA!)
+        try:
+            catalog_res = requests.get("http://service-catalog:8080/location", timeout=5).json()
+            location = catalog_res.get("location", "Turin,IT")
+        except Exception as e:
+            print(f"[ADAPTOR] Impossibile contattare il catalogo per la posizione. Uso default. ({e})")
+            location = "Turin,IT" # Fallback di emergenza
         
         # URL per previsioni orarie (Hourly)
         url = f"https://api.tomorrow.io/v4/weather/forecast?location={location}&apikey={api_key}"
-        headers = {"accept": "application/json"} # <--- Ora è dichiarato correttamente
+        headers = {"accept": "application/json"} 
         
         print(f"[ADAPTOR] Richiesta meteo ricevuta per: {location}")
+        
         try:
             print(f"[ADAPTOR] Richiesta meteo per: {location}") # LOG DI AVVIO
             r = requests.get(url, headers=headers)
