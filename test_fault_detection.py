@@ -77,6 +77,12 @@ def test_fault_detection(client):
     print("="*70)
     
     try:
+        # ===== STEP 0: SOTTOSCRIZIONE AGLI ALLARMI =====
+        print("\n[STEP 0] Sottoscrizione ai topic di allarme...")
+        client.subscribe(TOPIC_ALARMS)
+        print(f"✅ Sottoscritto a: {TOPIC_ALARMS}")
+        time.sleep(1)
+        
         # ===== STEP 1: ACCENDI LA POMPA =====
         print("\n[STEP 1] Accensione pompa in corso...")
         pump_on = [{"n": "pump_status", "v": 1}]
@@ -90,22 +96,23 @@ def test_fault_detection(client):
         publish_message(client, TOPIC_TELEMETRY, telemetry_1)
         time.sleep(2)
         
-        # ===== STEP 3: ATTENDI POMPA TIMEOUT (15 secondi) =====
+        # ===== STEP 3: ATTENDI POMPA TIMEOUT (15 secondi) E RACCOGLI ALLARMI =====
         print("\n[STEP 3] Invio dati telemetry senza aumento umidità...")
         print("⏱️  Fault Detection attenderà 15 secondi prima di attivare allarme...")
         
-        for i in range(3):
+        # Invia telemetry per ~35 secondi per raccogliere allarmi
+        for i in range(7):
             time.sleep(5)
             # Invia umidità ancora a 50% (nessun aumento!)
             telemetry_update = [{"n": "soil_moisture", "v": 50.0}]
             publish_message(client, TOPIC_TELEMETRY, telemetry_update)
-            print(f"   [{i+1}/3] Umidità stabile a 50%")
-        
-        # ===== STEP 4: ATTENDI ALLARMI =====
-        print("\n[STEP 4] Attesa allarme dal Fault Detection Service...")
-        print(f"⏱️  Attendendo {5} secondi...")
-        
-        time.sleep(5)
+            elapsed = (i + 1) * 5
+            print(f"   [{elapsed}s] Umidità stabile a 50% - Allarmi ricevuti: {len(alarms_received)}")
+            
+            # Se allarme ricevuto, continua per pochi secondi in più per raccoglierli tutti
+            if len(alarms_received) > 0 and i > 2:
+                print(f"✅ ALLARME RILEVATO dopo {elapsed} secondi!")
+                break
         
         # ===== RESULT =====
         print("\n" + "="*70)
