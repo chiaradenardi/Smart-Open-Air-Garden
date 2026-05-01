@@ -1,5 +1,5 @@
 services:
-  # Il Message Broker (Mosquitto) serve per la comunicazione MQTT
+
   message-broker:
     image: eclipse-mosquitto:latest
     container_name: message-broker
@@ -7,8 +7,6 @@ services:
       - "1883:1883"
       - "9001:9001"
 
-  # La tua Dashboard Node-RED
-  # La tua Dashboard Node-RED
   node-red:
     image: nodered/node-red:latest
     container_name: node-red
@@ -19,10 +17,6 @@ services:
     volumes:
       - ./node_red_data:/data
   
-  #*****************************************************************************************
-  # --- AGGIUNTO DA Davide 12/03/2026: Il Database ---
-  #****************************************************************************************
-
   influxdb:
     image: influxdb:2
     container_name: influxdb
@@ -37,8 +31,6 @@ services:
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: "dOzXCt01RpXm58Zh_Twn57mRkeRttHvtmbJi6FdPdM0kJh4D-7t2ldF2Ni8YeUg8QCXCqShqC6xMn8IViISstA=="
     restart: always
 
-
-  # Il servizio che si occupa di adattare i dati meteo
   weather-service-adaptor:
     build: ./weather_service_adaptor
     container_name: weather-service-adaptor
@@ -54,7 +46,7 @@ services:
     build: ./SmartIrrigationService
     container_name: smart-irrigation-service
     environment:
-      - PYTHONUNBUFFERED=1  # <--- AGGIUNGI QUESTA RIGA
+      - PYTHONUNBUFFERED=1  
     depends_on:
       - message-broker
       - service-catalog
@@ -70,10 +62,6 @@ services:
       - ./service_catalog/catalogManager.json:/app/catalogManager.json
     restart: always
   
-
-  #*****************************************************************************************
-  # --- AGGIUNTO DA Davide 26/03/2026: L'InfluxDB Adaptor ---
-  #****************************************************************************************
   influx-adaptor:
     build: ./influx_adaptor
     container_name: influx-adaptor
@@ -92,7 +80,6 @@ services:
     ports:
       - "8082:8082"
     environment:
-      # Natalia (InfluxDB Adaptor) è raggiungibile a porta 8081
       - INFLUX_ADAPTOR_URL=http://influx-adaptor:8081
     depends_on:
       - influx-adaptor

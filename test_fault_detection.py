@@ -15,17 +15,17 @@ import time
 import threading
 from datetime import datetime
 
-# ============ CONFIGURAZIONE ============
-BROKER_IP = "localhost"  # Cambia in "message-broker" se in Docker
+
+BROKER_IP = "localhost"  
 BROKER_PORT = 1883
 TEST_DEVICE = "RPi_test"
 
-# Topic di test
+
 TOPIC_PUMP = f"garden/{TEST_DEVICE}/pump"
 TOPIC_TELEMETRY = f"garden/{TEST_DEVICE}/telemetry"
 TOPIC_ALARMS = "garden/alerts/faults"
 
-# ============ VARIABILI GLOBALI ============
+
 alarms_received = []
 
 # ============ CALLBACK MQTT ============

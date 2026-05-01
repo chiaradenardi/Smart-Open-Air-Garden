@@ -5,32 +5,26 @@ import json
 import os
 import paho.mqtt.client as mqtt
 
-#DA MODIFICARE 
-
-# --- CONFIGURATION FOR DOCKER VARIABLES ---
-### NEED TO SET WITH CORRECT URL OF CATALOG (IF NOT USING DOCKER, DEFAULT IS LOCALHOST)
 CATALOG_URL = os.getenv("CATALOG_URL", "http://service-catalog:8080/broker")
+pump_state = "OFF"   # global variable for simulating the state of our physical actuator 
 
-# Global variable for state of simulated pump
-pump_state = "OFF"  # Variabile globale che simula lo stato del nostro attuatore fisico
 
-# --- HARDWARE SIMULATION ---
 def simulate_sensors(current_moisture):
-    """Simulation of DHT11 and humidity sensors"""
+    #DHT11 and humidity sensors'simulation
     temp = round(random.uniform(20.0, 24.0), 1)
     air_humidity = round(random.uniform(40.0, 50.0), 1)
     
     global pump_state
     if pump_state == "ON":
-        new_moisture = min(100.0, current_moisture + 2.0)  # Pump adds moisture
+        new_moisture = min(100.0, current_moisture + 2.0)  
     else:
-        new_moisture = max(30.0, current_moisture - 0.5)  # Soil dries, but min 30%
+        new_moisture = max(30.0, current_moisture - 0.5)  #soil drying
         
     return temp, air_humidity, new_moisture
 
-# --- REST FUNCTIONS ---
+
 def get_broker_config():
-    """Contact the Catalog via REST to get the configurations at startup, in particular Broker's IP and topics."""
+    #Fetches data via REST from catalog
     print("[INIT] Contacting the Service & Resource Catalog via REST")
     try:
         response = requests.get(CATALOG_URL, timeout=10)
