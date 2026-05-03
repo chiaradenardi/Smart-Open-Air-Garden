@@ -12,7 +12,7 @@ pump_state = "OFF"   # global variable for simulating the state of our physical 
 
 def simulate_sensors(current_moisture):
     #DHT11 and humidity sensors'simulation
-    termperature = round(random.uniform(20.0, 24.0), 1)
+    termp = round(random.uniform(20.0, 24.0), 1)
     air_humidity = round(random.uniform(40.0, 50.0), 1)
     
     global pump_state
@@ -21,7 +21,7 @@ def simulate_sensors(current_moisture):
     else:
         new_moisture = max(30.0, current_moisture - 0.5)  #soil drying
         
-    return termperature, air_humidity, new_moisture
+    return termp, air_humidity, new_moisture
 
 
 def get_broker_config():
@@ -39,7 +39,6 @@ def get_broker_config():
 
 
 def on_connect(client, userdata, flags, rc): 
-    #MQTT callback, handles subscription to command topics
     if rc == 0:
         print("[MQTT] Connection established with broker")
         client.subscribe(userdata['command_topic'])
@@ -94,18 +93,18 @@ if __name__ == "__main__":
     try:
         while True:               
             # data acquisition from our simulated sensors
-            temperature, humidity, soil_moisture = simulate_sensors(soil_moisture)
+            temp, air_hum, soil_moisture = simulate_sensors(soil_moisture)
             
             # our message payload to be sent to the broker
             payload = {
-                "temperature": temperature,
-                "air_humidity": humidity,
+                "temperature": temp,
+                "air_humidity": air_hum,
                 "soil_moisture": soil_moisture,
                 "timestamp": time.time()
             }
             
             client.publish(telemetry_topic, json.dumps(payload))
-            print(f"[TELEMETRY] Temp: {temperature}°C | Soil Moisture: {soil_moisture}% | Pump State: {pump_state}")
+            print(f"[TELEMETRY] Temp: {temp}°C | Soil Moisture: {soil_moisture}% | Pump State: {pump_state}")
             
             time.sleep(5)  
             
