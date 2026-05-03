@@ -6,12 +6,13 @@ import os
 import paho.mqtt.client as mqtt
 
 CATALOG_URL = os.getenv("CATALOG_URL", "http://service-catalog:8080/broker")
+DEVICE_ID = os.getenv("DEVICE_ID", "RPi_001")
 pump_state = "OFF"   # global variable for simulating the state of our physical actuator 
 
 
 def simulate_sensors(current_moisture):
     #DHT11 and humidity sensors'simulation
-    temp = round(random.uniform(20.0, 24.0), 1)
+    termperature = round(random.uniform(20.0, 24.0), 1)
     air_humidity = round(random.uniform(40.0, 50.0), 1)
     
     global pump_state
@@ -20,103 +21,93 @@ def simulate_sensors(current_moisture):
     else:
         new_moisture = max(30.0, current_moisture - 0.5)  #soil drying
         
-    return temp, air_humidity, new_moisture
+    return termperature, air_humidity, new_moisture
 
 
 def get_broker_config():
     #Fetches data via REST from catalog
-    print("[INIT] Contacting the Service & Resource Catalog via REST")
+    print("[INIT] Requesting configuration from Catalog")
     try:
         response = requests.get(CATALOG_URL, timeout=10)
         response.raise_for_status()
-        config_data = response.json()
-        print(f"[INIT] Configuration received from Catalog: {config_data}")
-        return config_data
+        configuration_data = response.json()
+        print(f"[INIT] Settings received: {configuration_data}")
+        return configuration_data
     except requests.exceptions.RequestException as e:
-        print(f"[ERROR] Impossible to contact Catalog. Detail: {e}")
+        print(f"[ERROR] Failed to reach Catalog. Details: {e}")
         return None
 
-# --- MQTT CALLBACK ---
-def on_connect(client, userdata, flags, rc):
-    """Callback eseguita quando il client si connette al broker."""
+
+def on_connect(client, userdata, flags, rc): 
+    #MQTT callback, handles subscription to command topics
     if rc == 0:
-        print("[MQTT] Successfully connected to MQTT Broker")
-        # Once connected, it will act as a Subscriber by subscribing to the command topic
+        print("[MQTT] Connection established with broker")
         client.subscribe(userdata['command_topic'])
         print(f"[MQTT] Listening to topic commands: {userdata['command_topic']}")
     else:
-        print(f"[MQTT] Error connecting to MQTT Broker. Code: {rc}")
+        print(f"[MQTT] Connection failed with error code: {rc}")
 
 def on_message(client, userdata, msg):
-    """When a message is received on a topic we are subscribed to, callback is executed."""
+    #toggle pump (on/off) based on message content
     global pump_state
     payload = msg.payload.decode('utf-8')
     print(f"\n[MQTT Received] Topic: {msg.topic} | Action: {payload}")
     
-    # Attuatio logic: analizes the command and "turns on/off" the pump
     if "ON" in payload.upper():
         pump_state = "ON"
-        print("PUMP TURNED ON: Water is flowing")
+        print(">>> SYSTEM UPDATE: Pump activated")
     elif "OFF" in payload.upper():
         pump_state = "OFF"
-        print("PUMP TURNED OFF: Water is not flowing")
+        print(">>> SYSTEM UPDATE: Pump deactivated")
 
-# --- MAIN FLOW ---
+
 if __name__ == "__main__":
-    # 1. retrieving configurations via REST from the Catalog (waits until the Catalog is available)
-    broker_config = None
-    while not broker_config:
-        broker_config = get_broker_config()
-        if not broker_config:
+    broker_configuration = None
+    while not broker_configuration: 
+        broker_configuration = get_broker_config() # when Catalog is availabe 
+        if not broker_configuration:
             time.sleep(5)
 
-     #extracting necessary info from the json received from the Catalog
-     ### INSERT CORRECT KEYS       
-    device_id = os.getenv("DEVICE_ID", "RPi_001")
-    # In device_connector.py, modifica queste righe nel main:
-    broker_ip = broker_config.get("broker_name", "message-broker") # Usa broker_name, non broker_ip
-    telemetry_topic = f"garden/{device_id}/telemetry"  # Include device_id for multi-plant support
-    command_topic = f"garden/{device_id}/pump"  # Include device_id for multi-plant support
+    broker_ip = broker_configuration.get("broker_name", "message-broker") 
+    telemetry_topic = f"garden/{DEVICE_ID}/telemetry"  
+    command_topic = f"garden/{DEVICE_ID}/pump"  
     
-    # 2. Setup MQTT Client and connect to the broker
+    # setup MQTT Client passing topics through callback 
     client = mqtt.Client(userdata={'command_topic': command_topic})
     client.on_connect = on_connect
     client.on_message = on_message
     
-    print(f"[SETUP] Connecting to MQTT Broker on {broker_ip}")
+    print(f"[SETUP] Connecting to broker at: {broker_ip}")
     while True:
         try:
             client.connect(broker_ip, 1883, 60)
-            break  # Exit the loop if connection is successful
+            break 
         except Exception as e:
-            print(f"[ERROR MQTT] Connection failed: {e}. Retrying in 5 seconds.")
-            time.sleep(5)  # Wait before retrying
+            print(f"[ERROR] MQTT Connection failed. Retrying... ({e})")
+            time.sleep(5)  
         
-    # Activate MQTT Loop: Start the MQTT loop in the background to handle message reception and pings
+
     client.loop_start()
-    
-    # 3. Main Cycle: Reading sensors and Publishing telemetry
-    soil_moisture = 60.0  # Initial moisture
-    print("\n[INIT] Starting the sensor simulation and telemetry publishing loop.")    
+    soil_moisture = 60.0  # default
+    print("\n[INIT] Telemetry loop started. Press Ctrl+C to stop.")    
     
     try:
         while True:               
-            # Reads sensors simulation (temperature, air humidity, soil moisture) and updates soil moisture based on pump state
-            temp, air_hum, soil_moisture = simulate_sensors(soil_moisture)
+            # data acquisition from our simulated sensors
+            temperature, humidity, soil_moisture = simulate_sensors(soil_moisture)
             
-            # Prepare the payload in JSON format
+            # our message payload to be sent to the broker
             payload = {
-                "temperature": temp,
-                "air_humidity": air_hum,
+                "temperature": temperature,
+                "air_humidity": humidity,
                 "soil_moisture": soil_moisture,
                 "timestamp": time.time()
             }
             
-            # Acts as a Publisher sending the telemetry
             client.publish(telemetry_topic, json.dumps(payload))
-            print(f"[TELEMETRY] Temp: {temp}°C | Soil Moisture: {soil_moisture}% | Pump State: {pump_state}")
+            print(f"[TELEMETRY] Temp: {temperature}°C | Soil Moisture: {soil_moisture}% | Pump State: {pump_state}")
             
-            time.sleep(5)  # Sampling frequency
+            time.sleep(5)  
             
     except KeyboardInterrupt:
         print("\n[STOP] Connector terminated by user. Disconnecting.")
