@@ -2,11 +2,20 @@ import cherrypy
 import requests
 import json
 import os
+import time  # <-- AGGIUNGI QUESTO
 
 class WeatherAdaptor:
     exposed = True
+    def __init__(self):
+        self.cached_result = None
+        self.last_fetch_time = 0
+        self.cache_ttl = 900  # 900 secondi = 15 minuti di validità
 
     def GET(self, *uri, **params):
+        current_time = time.time()
+        if self.cached_result and (current_time - self.last_fetch_time) < self.cache_ttl:
+            print("[ADAPTOR] Uso dati in CACHE. Nessuna chiamata a Tomorrow.io")
+            return self.cached_result
         # 1. Recupero la API KEY dalle variabili d'ambiente (questa rimane fissa)
         api_key = os.getenv('TOMORROW_API_KEY', 'vl2kNb5ZvcIWSMqS7oGfKgOzLTOd7FXf')
         
@@ -61,12 +70,21 @@ class WeatherAdaptor:
                 "location": location,
                 "status": "success"
             }
-            return json.dumps(result)
-
+            # Salvo in cache prima di inviare
+            self.cached_result = json.dumps(result)
+            self.last_fetch_time = current_time
+            return self.cached_result
         except requests.exceptions.RequestException as e:
-            cherrypy.response.status = 500
             print(f"[ADAPTOR] Errore di rete: {e}")
+            # SALVAGENTE: Se Tomorrow.io ci blocca (Error 429), diamo i dati vecchi al Cervello!
+            if self.cached_result:
+                print("[ADAPTOR] Tomorrow.io bloccato. Uso i vecchi dati della cache per emergenza.")
+                cherrypy.response.status = 200 # Mento al Cervello dicendo che è tutto ok
+                return self.cached_result
+            
+            cherrypy.response.status = 500
             return json.dumps({"status": "error", "message": "Errore di connessione API Tomorrow.io"})
+
         except Exception as e:
             cherrypy.response.status = 500
             print(f"[ADAPTOR] Errore interno: {e}")
