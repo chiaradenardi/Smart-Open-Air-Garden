@@ -97,6 +97,7 @@ services:
       - BROKER_IP=message-broker
       - SLOTS_URL=http://service-catalog:8080/slots
       - CATALOG_URL=http://service-catalog:8080
+      - STATISTICS_URL=http://statistics-service:8082
     depends_on:
       - message-broker
       - service-catalog

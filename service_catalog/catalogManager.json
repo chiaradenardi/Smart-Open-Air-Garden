@@ -258,8 +258,8 @@
     "garden_slots": [
         {
             "slotID": "P1_R1",
-            "slotName": "Orto Nord",
-            "plantID": "P4",
+            "slotName": "Zona P1_R1",
+            "plantID": "P6",
             "deviceID": "RPi_001",
             "status": "active"
         },

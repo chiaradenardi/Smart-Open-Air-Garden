@@ -50,14 +50,18 @@ class SmartIrrigation:
                 return
 
             # 2. Identificazione del dispositivo (es. RPi_001 o RPi_002)
-            device_id = topic.split('/')[1] 
+            device_id = topic.split('/')[1]
 
-            # Inizializza lo stato della pompa per questo device se è la prima volta che lo vediamo
+            # Skip messages from generic/non-device topics (e.g. garden/sensors/telemetry)
+            if not device_id.lower().startswith("rpi"):
+                return
+
+            # Initialise pump state for this device on first sight
             if device_id not in self.pumps_status:
                 self.pumps_status[device_id] = False
 
-            # 3. Recupero info dal Catalogo per lo slot specifico
-            # Cerchiamo quale pianta è associata a questo device_id
+            # 3. Fetch info from Catalog for the specific slot
+            # Find which plant is associated with this device_id
             slots_res = requests.get(f"{self.catalog_url}/slots").json()
             
             plant_id = None

@@ -19,6 +19,7 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 BROKER_IP = os.getenv("BROKER_IP", "message-broker")
 STRATEGY_REST_URL = os.getenv('SLOTS_URL', 'http://service-catalog:8080/slots')
 CATALOG_REST_URL = os.getenv('CATALOG_URL', 'http://service-catalog:8080')
+STATISTICS_URL = os.getenv('STATISTICS_URL', 'http://statistics-service:8082')
 
 # Variabile per salvare l'ID della chat dell'utente (per potergli inviare i messaggi MQTT)
 user_chat_id = None 
@@ -112,7 +113,11 @@ def handle_start(message):
     btn_soglie = telebot.types.InlineKeyboardButton("📊 Available Crops", callback_data="menu_soglie")
     markup.add(btn_prezzo, btn_soglie)
     
-    # Riga 3: Admin e Posizione
+    # Riga 3: Live Status
+    btn_status = telebot.types.InlineKeyboardButton("📈 Garden Live Status", callback_data="menu_status")
+    markup.add(btn_status)
+    
+    # Riga 4: Admin e Posizione
     btn_admin = telebot.types.InlineKeyboardButton("🔧 Admin Management", callback_data="menu_admin")
     btn_posizione = telebot.types.InlineKeyboardButton("🌍 Set Weather Location", callback_data="menu_posizione")
     markup.add(btn_admin, btn_posizione)
@@ -147,6 +152,74 @@ def handle_main_menu(call):
         handle_menu_posizione(call.message)
     elif comando == "admin":
         handle_admin_panel(call.message)
+    elif comando == "status":
+        handle_status(call.message)
+
+@bot.message_handler(commands=['status'])
+def handle_status(message):
+    try:
+        # 1. Fetch current slots and their assigned crops + devices
+        slots = requests.get(STRATEGY_REST_URL, timeout=5).json()
+        strategies = requests.get(f"{CATALOG_REST_URL}/strategies", timeout=5).json()
+
+        # 2. Fetch last soil_moisture readings from InfluxDB (last 10 min window)
+        INFLUX_URL = os.getenv("INFLUX_ADAPTOR_URL", "http://influx-adaptor:8081")
+        try:
+            history = requests.get(
+                f"{INFLUX_URL}/history",
+                params={"sensor_type": "soil_moisture", "period": "10m"},
+                timeout=5
+            ).json()
+            # Build a dict: device_id -> latest moisture value
+            latest_moisture = {}
+            for record in history:
+                dev = record.get("device", "")
+                # Strip trailing slash if present (e.g. "RPi_001/")
+                dev = dev.rstrip("/")
+                val = record.get("value")
+                if dev and val is not None:
+                    latest_moisture[dev] = val
+        except:
+            latest_moisture = {}
+
+        testo = "📈 *Garden Live Status*\n\n"
+
+        if not slots:
+            testo += "⚠️ No active slots configured.\n"
+        else:
+            for s in slots:
+                slot_id = s.get("slotID", "?")
+                plant_id = s.get("plantID", "")
+                device_id = s.get("deviceID", "—")
+                plant_name = strategies.get(plant_id, {}).get("name", plant_id) if plant_id else "—"
+
+                # Get last moisture for this device
+                moisture_val = latest_moisture.get(device_id)
+                if moisture_val is not None:
+                    moisture_str = f"`{round(moisture_val, 1)}%`"
+                else:
+                    moisture_str = "`N/A`"
+
+                testo += f"🌱 *{s.get('slotName', slot_id)}* (`{slot_id}`)\n"
+                testo += f"  🖥️ Device: `{device_id}`\n"
+                testo += f"  🌿 Crop: *{plant_name}*\n"
+                testo += f"  💧 Last soil moisture: {moisture_str}\n\n"
+
+        # 3. Fetch water savings from Statistics Service
+        try:
+            stats_res = requests.get(f"{STATISTICS_URL}/api/statistics?period=7d", timeout=5).json()
+            stats = stats_res.get("statistics", {})
+            testo += "💾 *Water Savings (last 7 days)*\n"
+            testo += f"  💧 Litres saved: `{stats.get('liters_saved', 'N/A')} L`\n"
+            testo += f"  📉 Savings: `{stats.get('savings_percentage', 'N/A')}%`\n"
+            testo += f"  🔁 Pump activations: `{stats.get('pump_activations_smart', 'N/A')}`\n"
+        except:
+            testo += "ℹ️ _Water savings stats temporarily unavailable._\n"
+
+        bot.send_message(message.chat.id, testo, parse_mode="Markdown")
+
+    except Exception as e:
+        bot.send_message(message.chat.id, f"❌ Error fetching garden status: {e}")
 
 def handle_admin_panel(message):
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
