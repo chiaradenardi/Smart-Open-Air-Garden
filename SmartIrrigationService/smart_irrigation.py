@@ -12,6 +12,10 @@ class SmartIrrigation:
         # Esempio: {"RPi_001": True, "RPi_002": False}
         self.pumps_status = {} 
         
+        # Dizionario per evitare di interrogare ripetutamente il meteo se abbiamo già deciso di non irrigare
+        self.last_weather_check = {} 
+        self.weather_cooldown = 900 # Cooldown di 15 minuti in secondi
+        
         self.weather_adaptor_url = "http://weather-service-adaptor:8085"
         self.topic_sub = "garden/+/telemetry"
 
@@ -82,7 +86,18 @@ class SmartIrrigation:
             # A. Accensione
             if current_moisture < moisture_threshold:
                 if not self.pumps_status[device_id]:
+                    # Controlliamo se abbiamo già interrogato il meteo di recente per questo dispositivo
+                    now = time.time()
+                    last_check = self.last_weather_check.get(device_id, 0)
+                    
+                    if (now - last_check) < self.weather_cooldown:
+                        # Abbiamo controllato da poco e avevamo visto che pioveva. 
+                        # Usciamo per non intasarci di richieste meteo continue.
+                        return
+                    
                     print(f"[{device_id}] Umidità critica. Controllo meteo...")
+                    self.last_weather_check[device_id] = now
+                    
                     rain_6h = 0
                     try:
                         weather_res = requests.get(self.weather_adaptor_url, timeout=5).json()
@@ -121,6 +136,10 @@ class SmartIrrigation:
                     }]
                     self.client.myPublish(f"garden/{device_id}/pump", command_payload)
                     self.pumps_status[device_id] = False
+                    
+                    # RESET COOLDOWN: Permettiamo di controllare di nuovo il meteo 
+                    # al prossimo ciclo, essenziale soprattutto nei test veloci del simulatore!
+                    self.last_weather_check[device_id] = 0
         except Exception as e:
             print(f"Errore notify per {topic}: {e}")
 

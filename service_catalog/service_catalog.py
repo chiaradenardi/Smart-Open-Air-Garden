@@ -207,8 +207,14 @@ class DevicesEndpoint:
         data=json.load(f)
         trovato=False
         f.close()
+        
+        # Pulizia dell'ID in ingresso per evitare spazi indesiderati e problemi di maiuscole/minuscole
+        new_device_id = body_json["deviceID"].strip()
+        body_json["deviceID"] = new_device_id
+        
         for i in data["devicesList"]:
-            if body_json["deviceID"]==i["deviceID"]:
+            # Controllo case-insensitive
+            if new_device_id.lower() == i["deviceID"].lower():
                 trovato=True
                 break
         if trovato:

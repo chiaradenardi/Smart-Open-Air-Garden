@@ -6,8 +6,8 @@
     },
     "waterPricePerM3": 2.5,
     "garden_grid": {
-        "max_pumps": 5,
-        "max_taps": 5
+        "max_pumps": 3,
+        "max_taps": 3
     },
     "devicesList": [
         {
@@ -64,23 +64,6 @@
             }
         },
         {
-            "deviceID": "Rpi__006",
-            "deviceName": "GardenGateway_006",
-            "status": "active",
-            "sensors": [
-                "SoilMoisture",
-                "DHT11"
-            ],
-            "actuators": [
-                "MicroServoPump"
-            ],
-            "config": {
-                "clientID": "Client_Rpi__006",
-                "telemetry_topic": "garden/Rpi__006/telemetry",
-                "command_topic": "garden/Rpi__006/pump"
-            }
-        },
-        {
             "deviceID": "RPi_006",
             "deviceName": "GardenGateway_006",
             "status": "active",
@@ -95,6 +78,40 @@
                 "clientID": "Client_RPi_006",
                 "telemetry_topic": "garden/RPi_006/telemetry",
                 "command_topic": "garden/RPi_006/pump"
+            }
+        },
+        {
+            "deviceID": "RPi_004",
+            "deviceName": "GardenGateway_004",
+            "status": "active",
+            "sensors": [
+                "SoilMoisture",
+                "DHT11"
+            ],
+            "actuators": [
+                "MicroServoPump"
+            ],
+            "config": {
+                "clientID": "Client_RPi_004",
+                "telemetry_topic": "garden/RPi_004/telemetry",
+                "command_topic": "garden/RPi_004/pump"
+            }
+        },
+        {
+            "deviceID": "RPi_010",
+            "deviceName": "GardenGateway_010",
+            "status": "active",
+            "sensors": [
+                "SoilMoisture",
+                "DHT11"
+            ],
+            "actuators": [
+                "MicroServoPump"
+            ],
+            "config": {
+                "clientID": "Client_RPi_010",
+                "telemetry_topic": "garden/RPi_010/telemetry",
+                "command_topic": "garden/RPi_010/pump"
             }
         }
     ],
@@ -229,20 +246,20 @@
             "name": "Lattuga",
             "min_moisture_threshold": 50.0
         },
-        "P4": {
-            "name": "Cipolla",
-            "min_moisture_threshold": 60.0
-        },
         "P5": {
             "name": "Cavolo",
             "min_moisture_threshold": 30.0
+        },
+        "P6": {
+            "name": "Prezzemolo",
+            "min_moisture_threshold": 45.0
         }
     },
     "garden_slots": [
         {
             "slotID": "P1_R1",
             "slotName": "Orto Nord",
-            "plantID": "P5",
+            "plantID": "P4",
             "deviceID": "RPi_001",
             "status": "active"
         },
@@ -254,10 +271,17 @@
             "status": "active"
         },
         {
-            "slotID": "P5_R5",
+            "slotID": "P3_R3",
+            "plantID": "P6",
+            "deviceID": "RPi_004",
+            "slotName": "Zona P3_R3",
+            "status": "active"
+        },
+        {
+            "slotID": "P3_R1",
             "plantID": "P5",
-            "deviceID": "RPi_002",
-            "slotName": "Zona P5_R5",
+            "deviceID": "RPi_010",
+            "slotName": "Zona P3_R1",
             "status": "active"
         }
     ],
