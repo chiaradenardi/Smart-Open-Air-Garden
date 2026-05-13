@@ -16,7 +16,8 @@ class SmartIrrigation:
         self.last_weather_check = {} 
         self.weather_cooldown = 900 # Cooldown di 15 minuti in secondi
         
-        self.weather_adaptor_url = "http://weather-service-adaptor:8085"
+        import os
+        self.weather_adaptor_url = os.getenv("WEATHER_URL", "http://weather-service-adaptor:8085")
         self.topic_sub = "garden/+/telemetry"
 
     def start(self):

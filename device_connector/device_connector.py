@@ -66,17 +66,28 @@ if __name__ == "__main__":
         broker_configuration = get_broker_config() # when Catalog is availabe 
         if not broker_configuration:
             time.sleep(5)
+            
+    # Ottieni la configurazione specifica del dispositivo dal catalogo per leggere il Client ID
+    device_client_id = f"Client_{DEVICE_ID}" # Fallback
+    try:
+        catalog_base = CATALOG_URL.replace("/broker", "")
+        res = requests.get(f"{catalog_base}/devices/{DEVICE_ID}", timeout=10)
+        if res.status_code == 200 and "config" in res.json():
+            device_client_id = res.json()["config"].get("clientID", device_client_id)
+            print(f"[INIT] Device Client ID fetched: {device_client_id}")
+    except Exception as e:
+        print(f"[WARNING] Could not fetch specific device config, using fallback ID {device_client_id}: {e}")
 
     broker_ip = broker_configuration.get("broker_name", "message-broker") 
     telemetry_topic = f"garden/{DEVICE_ID}/telemetry"  
     command_topic = f"garden/{DEVICE_ID}/pump"  
     
-    # setup MQTT Client passing topics through callback 
-    client = mqtt.Client(userdata={'command_topic': command_topic})
+    # setup MQTT Client passing topics through callback and setting the Client ID
+    client = mqtt.Client(client_id=device_client_id, userdata={'command_topic': command_topic})
     client.on_connect = on_connect
     client.on_message = on_message
     
-    print(f"[SETUP] Connecting to broker at: {broker_ip}")
+    print(f"[SETUP] Connecting to broker at: {broker_ip} with ID {device_client_id}")
     while True:
         try:
             client.connect(broker_ip, 1883, 60)
@@ -95,13 +106,12 @@ if __name__ == "__main__":
             # data acquisition from our simulated sensors
             temp, air_hum, soil_moisture = simulate_sensors(soil_moisture)
             
-            # our message payload to be sent to the broker
-            payload = {
-                "temperature": temp,
-                "air_humidity": air_hum,
-                "soil_moisture": soil_moisture,
-                "timestamp": time.time()
-            }
+            # our message payload to be sent to the broker in SenML format
+            payload = [
+                {"bn": f"{DEVICE_ID}/", "n": "temperature", "v": temp, "u": "Cel", "t": int(time.time())},
+                {"n": "air_humidity", "v": air_hum, "u": "%RH", "t": int(time.time())},
+                {"n": "soil_moisture", "v": soil_moisture, "u": "%RH", "t": int(time.time())}
+            ]
             
             client.publish(telemetry_topic, json.dumps(payload))
             print(f"[TELEMETRY] Temp: {temp}°C | Soil Moisture: {soil_moisture}% | Pump State: {pump_state}")
