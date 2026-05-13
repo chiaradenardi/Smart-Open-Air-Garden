@@ -23,7 +23,7 @@ class SmartIrrigation:
     def start(self):
         self.client.start()
         self.client.mySubscribe(self.topic_sub)
-        print(f"--- Smart Irrigation multizona started ---")
+        print(f"--- Smart Irrigation multizone started ---")
         print(f"Catalog: {self.catalog_url}")
         print(f"Weather: {self.weather_adaptor_url}")
 
@@ -63,21 +63,21 @@ class SmartIrrigation:
             slots_res = requests.get(f"{self.catalog_url}/slots").json()
             
             plant_id = None
-            slot_name = "Ignoto"
+            slot_name = "Unknown"
             for slot in slots_res:
                 if slot.get("deviceID") == device_id:
                     plant_id = slot.get("plantID")
-                    slot_name = slot.get("slotName", "Zona")
+                    slot_name = slot.get("slotName", "Zone")
                     break
             
             if not plant_id:
-                print(f"[!] {device_id} non associato a nessuna pianta nel catalogo.")
+                print(f"[!] {device_id} not associated with any crop in the catalog.")
                 return
 
             # Get the specific threshold for that plant
             strat_res = requests.get(f"{self.catalog_url}/strategies/{plant_id}").json()
             moisture_threshold = strat_res.get("min_moisture_threshold", 40.0)
-            plant_name = strat_res.get("name", "Pianta")
+            plant_name = strat_res.get("name", "Crop")
             
             # Stop threshold (20% above the minimum)
             target_moisture = moisture_threshold + 20.0
@@ -145,7 +145,7 @@ class SmartIrrigation:
 
 if __name__ == "__main__":
     print("Brain initializing...")
-    # NOTA: catalog_url deve essere senza lo slash finale
+    # NOTE: catalog_url must be without the trailing slash
     brain = SmartIrrigation("IrrigationBrain", "message-broker", 1883, "http://service-catalog:8080")
     brain.start()
     print("System started and listening!")
