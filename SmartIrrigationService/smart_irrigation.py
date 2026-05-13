@@ -8,13 +8,13 @@ class SmartIrrigation:
         self.client = MyMQTT(clientID, broker, port, self)
         self.catalog_url = catalog_url
         
-        # Dizionario per gestire lo stato della pompa di ogni dispositivo separatamente
-        # Esempio: {"RPi_001": True, "RPi_002": False}
+        #Dictionary to manage the pump status of each device separately
+        #Example: {"RPi_001": True, "RPi_002": False}
         self.pumps_status = {} 
         
-        # Dizionario per evitare di interrogare ripetutamente il meteo se abbiamo già deciso di non irrigare
+        #dictionary to avoid querying the weather repeatedly if we have already decided not to irrigate
         self.last_weather_check = {} 
-        self.weather_cooldown = 900 # Cooldown di 15 minuti in secondi
+        self.weather_cooldown = 900 # Cooldown of 15 minutes in seconds
         
         import os
         self.weather_adaptor_url = os.getenv("WEATHER_URL", "http://weather-service-adaptor:8085")
@@ -23,9 +23,9 @@ class SmartIrrigation:
     def start(self):
         self.client.start()
         self.client.mySubscribe(self.topic_sub)
-        print(f"--- Smart Irrigation multizona avviata ---")
-        print(f"Catalogo: {self.catalog_url}")
-        print(f"Meteo: {self.weather_adaptor_url}")
+        print(f"--- Smart Irrigation multizona started ---")
+        print(f"Catalog: {self.catalog_url}")
+        print(f"Weather: {self.weather_adaptor_url}")
 
     def notify(self, topic, payload):
         try:
@@ -33,27 +33,25 @@ class SmartIrrigation:
                 payload = payload.decode('utf-8')
             msg = json.loads(payload)
             
-            # --- MODIFICA QUI: Estrazione umidità dal formato semplice ---
-            # msg è un dizionario tipo {"soil_moisture": 60.0, ...}
             current_moisture = None
         
-        # Se il messaggio è una lista (SenML)
+        # If the message is a list (SenML)
             if isinstance(msg, list):
                 for entry in msg:
                     if entry.get("n") == "soil_moisture":
                         current_moisture = entry.get("v")
                         break
-        # Se il messaggio è un dizionario semplice (per compatibilità)
+        # If the message is a simple dictionary (for compatibility)
             elif isinstance(msg, dict):
                 current_moisture = msg.get("soil_moisture")
             
             if current_moisture is None: 
                 return
 
-            # 2. Identificazione del dispositivo (es. RPi_001 o RPi_002)
+            # Identification of the device
             device_id = topic.split('/')[1]
 
-            # Skip messages from generic/non-device topics (e.g. garden/sensors/telemetry)
+            # Skip messages from generic/non-device topics
             if not device_id.lower().startswith("rpi"):
                 return
 
@@ -61,7 +59,6 @@ class SmartIrrigation:
             if device_id not in self.pumps_status:
                 self.pumps_status[device_id] = False
 
-            # 3. Fetch info from Catalog for the specific slot
             # Find which plant is associated with this device_id
             slots_res = requests.get(f"{self.catalog_url}/slots").json()
             
@@ -77,44 +74,43 @@ class SmartIrrigation:
                 print(f"[!] {device_id} non associato a nessuna pianta nel catalogo.")
                 return
 
-            # Recupero soglia specifica per quella pianta
+            # Get the specific threshold for that plant
             strat_res = requests.get(f"{self.catalog_url}/strategies/{plant_id}").json()
             moisture_threshold = strat_res.get("min_moisture_threshold", 40.0)
             plant_name = strat_res.get("name", "Pianta")
             
-            # Soglia di stop (20% sopra il minimo)
+            # Stop threshold (20% above the minimum)
             target_moisture = moisture_threshold + 20.0
 
             print(f"[{slot_name} - {device_id}] {plant_name}: {current_moisture}% | Range: {moisture_threshold}%-{target_moisture}%")
 
-            # 4. LOGICA DI CONTROLLO (Indipendente per ogni dispositivo)
-            # A. Accensione
+            # Control logic (independent for each device)
+        
             if current_moisture < moisture_threshold:
                 if not self.pumps_status[device_id]:
-                    # Controlliamo se abbiamo già interrogato il meteo di recente per questo dispositivo
+                    # Check if we have already queried the weather recently for this device
                     now = time.time()
                     last_check = self.last_weather_check.get(device_id, 0)
                     
                     if (now - last_check) < self.weather_cooldown:
-                        # Abbiamo controllato da poco e avevamo visto che pioveva. 
-                        # Usciamo per non intasarci di richieste meteo continue.
+                        # We checked recently and saw it was raining.
+                        # Exit to avoid flooding with weather requests.
                         return
                     
-                    print(f"[{device_id}] Umidità critica. Controllo meteo...")
+                    print(f"[{device_id}] Critical moisture. Checking weather...")
                     self.last_weather_check[device_id] = now
                     
                     rain_6h = 0
                     try:
                         weather_res = requests.get(self.weather_adaptor_url, timeout=5).json()
                         rain_6h = weather_res.get("total_rain_accumulation_6h", 0)
-                        # 2. TRUCCO STRESS TEST: Fingiamo che stia arrivando il diluvio universale! 🌧️
-                        # (Così non dobbiamo aspettare che piova davvero a Torino/Modena)
+                        #STRESS TEST
                         #rain_6h = 50.0
                     except Exception as e:
-                        print(f"  [!] Errore Meteo: {e}. Procedo con l'irrigazione di sicurezza.")
+                        print(f"  [!] Weather Error: {e}. Proceeding with safety irrigation.")
 
                     if rain_6h < 2.0:
-                        print(f"[{device_id}] Azione: START Irrigazione (Pioggia prevista: {rain_6h}mm)")
+                        print(f"[{device_id}] Action: START Irrigation (Rain expected: {rain_6h}mm)")
                         command_payload = [{
                             "bn": f"{device_id}/",
                             "n": "pump_status",
@@ -126,12 +122,12 @@ class SmartIrrigation:
                         self.pumps_status[device_id] = True
                         
                     else:
-                        print(f"[{device_id}] Azione: SKIP (Pioverà tra poco)")
+                        print(f"[{device_id}] Action: SKIP (Rain expected)")
 
-            # B. Spegnimento
+            #Turning off
             elif current_moisture > target_moisture:
                 if self.pumps_status[device_id]:
-                    print(f"[{device_id}] Umidità ripristinata. Azione: STOP.")
+                    print(f"[{device_id}] Humidity restored. Action: STOP.")
                     command_payload = [{
                         "bn": f"{device_id}/",
                         "n": "pump_status",
@@ -142,17 +138,16 @@ class SmartIrrigation:
                     self.client.myPublish(f"garden/{device_id}/pump", command_payload)
                     self.pumps_status[device_id] = False
                     
-                    # RESET COOLDOWN: Permettiamo di controllare di nuovo il meteo 
-                    # al prossimo ciclo, essenziale soprattutto nei test veloci del simulatore!
+                    #RESET COOLDOWN
                     self.last_weather_check[device_id] = 0
         except Exception as e:
-            print(f"Errore notify per {topic}: {e}")
+            print(f"Error notify for {topic}: {e}")
 
 if __name__ == "__main__":
-    print("Inizializzazione Brain...")
+    print("Brain initializing...")
     # NOTA: catalog_url deve essere senza lo slash finale
     brain = SmartIrrigation("IrrigationBrain", "message-broker", 1883, "http://service-catalog:8080")
     brain.start()
-    print("Sistema avviato e in ascolto!")
+    print("System started and listening!")
     while True:
         time.sleep(1)

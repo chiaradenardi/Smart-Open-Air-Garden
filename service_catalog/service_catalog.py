@@ -2,10 +2,6 @@ import cherrypy
 import time
 import json
 
-#**********************************************************************************
-# l'approccio che avevo usato prima è sbagliato perchè era software monolitico
-# uso corretto di cherrypy e methoddispatcher
-#**********************************************************************************
 
 class BrokerEndpoint:
     exposed=True
@@ -100,7 +96,7 @@ class SlotsEndpoint:
         trovato=False
         f.close()
         
-        # Controllo 1: Verifica se lo slotID è già in uso
+        # Check 1: SLOT ID already in the system
         for i in data["garden_slots"]:
             if body_json["slotID"]==i["slotID"]:
                 trovato=True
@@ -108,7 +104,7 @@ class SlotsEndpoint:
         if trovato:
             return json.dumps({"error":"SLOT ID already in the system"})
         
-        # Controllo 2: Verifica se il deviceID è già assegnato a un altro slot
+        # Check 2: DEVICE ID already in use by another slot
         device_already_used = False
         device_used_by_slot = None
         for slot in data["garden_slots"]:
@@ -124,7 +120,7 @@ class SlotsEndpoint:
                 "used_by_slot": device_used_by_slot
             }, indent=4)
         
-        # Se tutti i controlli passano, aggiungi lo slot
+        # If all checks pass, add the slot
         data["garden_slots"].append(body_json)
         file=open("catalogManager.json","w")
         json.dump(data,file,indent=4)
@@ -184,7 +180,7 @@ class DevicesEndpoint:
             f.close()
             for i in data["devicesList"]:
                 if body_json["deviceID"]==i["deviceID"]:
-                    # Aggiorniamo lo status al posto del plantID
+                    # update the status instead of the plantID
                     i["status"]=body_json["status"]
                     trovato=True
                     break
@@ -199,7 +195,7 @@ class DevicesEndpoint:
     def POST(self):
         body = cherrypy.request.body.read().decode('utf-8')
         body_json=json.loads(body)
-        # Controllo sulle chiavi base per i device
+        # Check on the base keys for devices
         if "deviceID" not in body_json or "deviceName" not in body_json:
             return json.dumps({"error": "Data missing (deviceID or deviceName not present)"}, indent=4)
               
@@ -208,12 +204,12 @@ class DevicesEndpoint:
         trovato=False
         f.close()
         
-        # Pulizia dell'ID in ingresso per evitare spazi indesiderati e problemi di maiuscole/minuscole
+        # Clean input ID to avoid unwanted spaces and case issues
         new_device_id = body_json["deviceID"].strip()
         body_json["deviceID"] = new_device_id
         
         for i in data["devicesList"]:
-            # Controllo case-insensitive
+            # case-insensitive check
             if new_device_id.lower() == i["deviceID"].lower():
                 trovato=True
                 break
@@ -278,7 +274,7 @@ class ServicesEndpoint:
             f.close()
             for i in data["servicesList"]:
                 if body_json["serviceID"]==i["serviceID"]:
-                    # Aggiorniamo lo status del servizio (es. se va offline)
+                    # update the status of the service (e.g. if it goes offline)
                     i["status"]=body_json["status"]
                     trovato=True
                     break
@@ -364,7 +360,7 @@ class UsersEndpoint:
             f.close()
             for i in data["usersList"]:
                 if body_json["userID"]==i["userID"]:
-                    # Aggiorniamo ad esempio la chatID di Telegram
+                    # update the telegramChatID
                     i["telegramChatID"]=body_json["telegramChatID"]
                     trovato=True
                     break
@@ -431,7 +427,7 @@ class StrategiesEndpoint:
             
         if len(uri) > 0:
             plant_id = uri[0]
-            # Nei dizionari basta usare 'in' invece del ciclo for!
+            # check if the plantID is in the irrigation strategies
             if plant_id in data["irrigation_strategies"]:
                 return json.dumps(data["irrigation_strategies"][plant_id], indent=4)
             else:
@@ -447,7 +443,7 @@ class StrategiesEndpoint:
             
             plant_id = body_json.get("plantID")
             if plant_id and plant_id in data["irrigation_strategies"]:
-                # Aggiorniamo la soglia di umidità
+                # update the moisture threshold
                 data["irrigation_strategies"][plant_id]["min_moisture_threshold"] = body_json["min_moisture_threshold"]
                 
                 file=open("catalogManager.json","w")
@@ -471,7 +467,7 @@ class StrategiesEndpoint:
         if plant_id in data["irrigation_strategies"]:
             return json.dumps({"error":"STRATEGY ID already in the system"})
         else:
-            # Aggiunta diretta nel dizionario
+            # Direct addition to dictionary
             data["irrigation_strategies"][plant_id] = {
                 "name": body_json["name"],
                 "min_moisture_threshold": body_json["min_moisture_threshold"]
@@ -489,7 +485,7 @@ class StrategiesEndpoint:
         if len(uri) > 0:
             plant_id = uri[0]
             if plant_id in data["irrigation_strategies"]:
-                # Nei dizionari si usa 'del' per eliminare una chiave
+                # Use 'del' to delete a key in a dictionary
                 del data["irrigation_strategies"][plant_id]
                 file=open("catalogManager.json","w")
                 json.dump(data,file,indent=4)
@@ -500,14 +496,14 @@ class StrategiesEndpoint:
         return json.dumps({"error": "Missing STRATEGY ID in the URL"}, indent=4)
     
 #******************************************************************************************
-# LOCATION API REST (Per il Meteo)
+# LOCATION API REST 
 #******************************************************************************************
 class LocationEndpoint:
     exposed = True
     def GET(self):
         with open("catalogManager.json", "r") as f:
             data = json.load(f)
-        # Se non c'è ancora una posizione salvata, restituisce un valore di default
+        # If no location is saved yet, return a default value
         location = data.get("garden_location", "44.6458,10.9257") 
         return json.dumps({"location": location}, indent=4)
 
@@ -528,7 +524,7 @@ class LocationEndpoint:
         return json.dumps({"result": "Location successfully updated", "location": data["garden_location"]}, indent=4)
     
 #******************************************************************************************
-# GRID API REST (Dimensioni Giardino)
+# GRID API REST 
 #******************************************************************************************
 class GridEndpoint:
     exposed = True

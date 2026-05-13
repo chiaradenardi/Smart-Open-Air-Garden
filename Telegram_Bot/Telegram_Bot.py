@@ -4,13 +4,13 @@ import paho.mqtt.client as mqtt
 import requests
 import json
 import os
-from dotenv import load_dotenv # Aggiungi questa libreria
+from dotenv import load_dotenv # Add this library
 
-# Questa funzione cerca un file chiamato ".env" nella cartella corrente e lo carica
+# This function looks for a file named ".env" in the current folder and loads it
 load_dotenv()
 
 # GLOBAL CONFIGURATION
-# 1. Ottieni questo token scrivendo a @BotFather su Telegram
+# 1. Get this token by writing to @BotFather on Telegram
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN") 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
@@ -21,14 +21,14 @@ STRATEGY_REST_URL = os.getenv('SLOTS_URL', 'http://service-catalog:8080/slots')
 CATALOG_REST_URL = os.getenv('CATALOG_URL', 'http://service-catalog:8080')
 STATISTICS_URL = os.getenv('STATISTICS_URL', 'http://statistics-service:8082')
 
-# Variabile per salvare l'ID della chat dell'utente (per potergli inviare i messaggi MQTT)
+# Variable to save the user's chat ID (to send MQTT messages)
 user_chat_id = None 
 
-# --- CALLBACK MQTT (Gestione Notifiche in Ingresso) ---
+# --- MQTT CALLBACK (Incoming Notifications Management) ---
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("[MQTT] Bot connesso al Broker!")
-        # Il bot si iscrive ai topic degli allarmi e della pompa
+        # The bot subscribes to alarms and pump topics
         client.subscribe("garden/alerts/faults")
         client.subscribe("garden/+/pump")
         client.subscribe("garden/statistics/water-saved")
@@ -40,27 +40,27 @@ def on_message(client, userdata, msg):
         payload_raw = msg.payload.decode('utf-8')
         print(f"\n[BOT] 📨 Ricevuto su: {msg.topic}")
         
-        # 1. Decodifica e formattazione del messaggio
+        # 1. Message decoding and formatting
         if "pump" in msg.topic:
             try:
-                # Decodifichiamo il SenML (es. [{"v": 1, ...}])
+                # Decode SenML (e.g. [{"v": 1, ...}])
                 data = json.loads(payload_raw)
-                status = data[0].get("v") # Prende il valore 1 o 0
+                status = data[0].get("v") # Gets the value 1 or 0
                 pump_status = "ON ✅" if status == 1 else "OFF ❌"
                 device = msg.topic.split("/")[1]
-                testo = f"💧 *Pump Update*\nDevice: `{device}`\nStatus: *{pump_status}*"
+                message_text = f"💧 *Pump Update*\nDevice: `{device}`\nStatus: *{pump_status}*"
             except:
-                testo = f"💧 *Pump Update:*\n{payload_raw}"
+                message_text = f"💧 *Pump Update:*\n{payload_raw}"
         
         elif "faults" in msg.topic:
             try:
-                # Spacchettiamo il JSON per evitare i problemi di formattazione
+                # Unpack the JSON to avoid formatting issues
                 fault_data = json.loads(payload_raw)
                 device = fault_data.get("device", "Unknown")
                 desc = fault_data.get("description", "Unknown fault")
                 severity = fault_data.get("severity", "HIGH")
                 
-                testo = (
+                message_text = (
                     f"🚨 *CRITICAL ALARM!* 🚨\n\n"
                     f"📟 *Device:* `{device}`\n"
                     f"⚠️ *Severity:* {severity}\n"
@@ -68,91 +68,91 @@ def on_message(client, userdata, msg):
                 )
             except:
                 # Safety fallback: if not JSON, wrap in a code block
-                testo = f"🚨 *CRITICAL ALARM!*\n```text\n{payload_raw}\n```"
+                message_text = f"🚨 *CRITICAL ALARM!*\n```text\n{payload_raw}\n```"
                 
         else:
-            testo = f"ℹ️ *System Notification:*\n{payload_raw}"
+            message_text = f"ℹ️ *System Notification:*\n{payload_raw}"
 
-        # 2. Invio a tutti gli utenti registrati
+        # 2. Send to all registered users
         users = requests.get(f"{CATALOG_REST_URL}/users", timeout=5).json()
         for u in users:
             chat_id = u.get("telegramChatID")
             if chat_id and len(str(chat_id)) > 5:
-                bot.send_message(chat_id, testo, parse_mode="Markdown")
+                bot.send_message(chat_id, message_text, parse_mode="Markdown")
                 print(f"[BOT] Notification sent to {u['userName']}")
 
     except Exception as e:
         print(f"[BOT ERROR] Error in on_message: {e}")
 
-# --- HANDLER TELEGRAM (Gestione Interazione User) ---
+# --- TELEGRAM HANDLER (User Interaction Management) ---
 
-# --- MENU PRINCIPALE (DASHBOARD) ---
+# --- MAIN MENU (DASHBOARD) ---
 
 @bot.message_handler(commands=['start'])
 def handle_start(message):
     global user_chat_id
-    user_chat_id = message.chat.id  # Salviamo l'ID per le notifiche MQTT
+    user_chat_id = message.chat.id  # Save ID for MQTT notifications
 
-    benvenuto = (
+    welcome_message = (
         "🌱 *Smart Open Air Garden - Control Panel* 🌱\n\n"
         "Welcome to your IoT ecosystem. From here you can monitor the sensors, "
         "manage irrigation and monitor your consumption.\n\n"
         "Use the buttons below to navigate the system."
     )
     
-    # Creiamo la pulsantiera professionale
+    # Create the professional keyboard
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     
-    # Riga 1: Gestione principale
-    btn_coltura = telebot.types.InlineKeyboardButton("🌿 Crop Management", callback_data="menu_coltura")
-    btn_dispositivi = telebot.types.InlineKeyboardButton("🖥️ Device Status", callback_data="menu_dispositivi")
-    markup.add(btn_coltura, btn_dispositivi)
+    # Row 1: Main management
+    btn_crop = telebot.types.InlineKeyboardButton("🌿 Crop Management", callback_data="menu_coltura")
+    btn_devices = telebot.types.InlineKeyboardButton("🖥️ Device Status", callback_data="menu_dispositivi")
+    markup.add(btn_crop, btn_devices)
     
-    # Riga 2: Dati e Impostazioni
-    btn_prezzo = telebot.types.InlineKeyboardButton("💶 Water Price", callback_data="menu_prezzo")
-    btn_soglie = telebot.types.InlineKeyboardButton("📊 Available Crops", callback_data="menu_soglie")
-    markup.add(btn_prezzo, btn_soglie)
+    # Row 2: Data and Settings
+    btn_price = telebot.types.InlineKeyboardButton("💶 Water Price", callback_data="menu_prezzo")
+    btn_thresholds = telebot.types.InlineKeyboardButton("📊 Available Crops", callback_data="menu_soglie")
+    markup.add(btn_price, btn_thresholds)
     
-    # Riga 3: Live Status
+    # Row 3: Live Status
     btn_status = telebot.types.InlineKeyboardButton("📈 Garden Live Status", callback_data="menu_status")
     markup.add(btn_status)
     
-    # Riga 4: Admin e Posizione
+    # Row 4: Admin and Location
     btn_admin = telebot.types.InlineKeyboardButton("🔧 Admin Management", callback_data="menu_admin")
-    btn_posizione = telebot.types.InlineKeyboardButton("🌍 Set Weather Location", callback_data="menu_posizione")
-    markup.add(btn_admin, btn_posizione)
+    btn_location = telebot.types.InlineKeyboardButton("🌍 Set Weather Location", callback_data="menu_posizione")
+    markup.add(btn_admin, btn_location)
     
-    # Riga 4: Profilo utente (centrato, prende tutta la larghezza)
-    btn_profilo = telebot.types.InlineKeyboardButton("👤 Link Profile (Receive Notifications)", callback_data="menu_profilo")
-    markup.add(btn_profilo)
+    # Row 4: User Profile 
+    btn_profile = telebot.types.InlineKeyboardButton("👤 Link Profile (Receive Notifications)", callback_data="menu_profilo")
+    markup.add(btn_profile)
     
-    bot.reply_to(message, benvenuto, reply_markup=markup, parse_mode="Markdown")
+    bot.reply_to(message, welcome_message, reply_markup=markup, parse_mode="Markdown")
 
-# --- ROUTER DEL MENU ---
-# Questa funzione "ascolta" i click sui bottoni del menu e richiama le funzioni che abbiamo già creato!
+# --- MENU ROUTER ---
+# This function "listens" to button clicks and calls the functions
 @bot.callback_query_handler(func=lambda call: call.data.startswith("menu_"))
 def handle_main_menu(call):
-    bot.answer_callback_query(call.id) # Rimuove il "caricamento" sul bottone
+    bot.answer_callback_query(call.id) # Remove "loading" on button
     
-    comando = call.data.split("_")[1]
+    command = call.data.split("_")[1]
     
-    # In base al bottone cliccato, deviamo il traffico alla funzione corretta
-    # passando 'call.message' in modo che la funzione risponda nella chat giusta
-    if comando == "coltura":
-        handle_coltura(call.message)
-    elif comando == "dispositivi":
-        handle_dispositivi(call.message)
-    elif comando == "prezzo":
-        handle_prezzo(call.message)
-    elif comando == "soglie":
-        handle_soglie(call.message)
-    elif comando == "profilo":
-        handle_profilo(call.message)
-    elif comando == "posizione":
-        handle_menu_posizione(call.message)
-    elif comando == "admin":
+    # Depending on the clicked button, route traffic to the correct function
+    # passing 'call.message' so the function responds in the correct chat
+    if command == "crop":
+        handle_crop(call.message)
+    elif command == "devices":
+        handle_devices(call.message)
+    elif command == "price":
+        handle_price(call.message)
+    elif command == "thresholds":
+        handle_thresholds(call.message)
+    elif command == "profile":
+        handle_profile(call.message)
+    elif command == "location":
+        handle_menu_location(call.message)
+    elif command == "admin":
         handle_admin_panel(call.message)
-    elif comando == "status":
+    elif command == "status":
         handle_status(call.message)
 
 @bot.message_handler(commands=['status'])
@@ -182,10 +182,10 @@ def handle_status(message):
         except:
             latest_moisture = {}
 
-        testo = "📈 *Garden Live Status*\n\n"
+        message_text = "📈 *Garden Live Status*\n\n"
 
         if not slots:
-            testo += "⚠️ No active slots configured.\n"
+            message_text += "⚠️ No active slots configured.\n"
         else:
             for s in slots:
                 slot_id = s.get("slotID", "?")
@@ -200,23 +200,23 @@ def handle_status(message):
                 else:
                     moisture_str = "`N/A`"
 
-                testo += f"🌱 *{s.get('slotName', slot_id)}* (`{slot_id}`)\n"
-                testo += f"  🖥️ Device: `{device_id}`\n"
-                testo += f"  🌿 Crop: *{plant_name}*\n"
-                testo += f"  💧 Last soil moisture: {moisture_str}\n\n"
+                message_text += f"🌱 *{s.get('slotName', slot_id)}* (`{slot_id}`)\n"
+                message_text += f"  🖥️ Device: `{device_id}`\n"
+                message_text += f"  🌿 Crop: *{plant_name}*\n"
+                message_text += f"  💧 Last soil moisture: {moisture_str}\n\n"
 
         # 3. Fetch water savings from Statistics Service
         try:
             stats_res = requests.get(f"{STATISTICS_URL}/api/statistics?period=7d", timeout=5).json()
             stats = stats_res.get("statistics", {})
-            testo += "💾 *Water Savings (last 7 days)*\n"
-            testo += f"  💧 Litres saved: `{stats.get('liters_saved', 'N/A')} L`\n"
-            testo += f"  📉 Savings: `{stats.get('savings_percentage', 'N/A')}%`\n"
-            testo += f"  🔁 Pump activations: `{stats.get('pump_activations_smart', 'N/A')}`\n"
+            message_text += "💾 *Water Savings (last 7 days)*\n"
+            message_text += f"  💧 Litres saved: `{stats.get('liters_saved', 'N/A')} L`\n"
+            message_text += f"  📉 Savings: `{stats.get('savings_percentage', 'N/A')}%`\n"
+            message_text += f"  🔁 Pump activations: `{stats.get('pump_activations_smart', 'N/A')}`\n"
         except:
-            testo += "ℹ️ _Water savings stats temporarily unavailable._\n"
+            message_text += "ℹ️ _Water savings stats temporarily unavailable._\n"
 
-        bot.send_message(message.chat.id, testo, parse_mode="Markdown")
+        bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
 
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Error fetching garden status: {e}")
@@ -224,85 +224,85 @@ def handle_status(message):
 def handle_admin_panel(message):
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     
-    # Riga 1: Slot
+    # Row 1: Slot
     markup.add(
         telebot.types.InlineKeyboardButton("➕ Add Slot", callback_data="admin_add_slot"),
         telebot.types.InlineKeyboardButton("➖ Remove Slot", callback_data="admin_rem_slot")
     )
-    # Riga 2: Device
+    # Row 2: Device
     markup.add(
         telebot.types.InlineKeyboardButton("➕ Add Device", callback_data="admin_add_device"),
         telebot.types.InlineKeyboardButton("➖ Remove Device", callback_data="admin_rem_device")
     )
-    # Riga 3: Piante
+    # Row 3: Crops
     markup.add(
         telebot.types.InlineKeyboardButton("➕ Add Crop", callback_data="admin_add_plant"),
         telebot.types.InlineKeyboardButton("➖ Remove Crop", callback_data="admin_rem_plant")
     )
-    # Riga 4: Utenti
+    # Row 4: Users
     markup.add(
         telebot.types.InlineKeyboardButton("➕ Add User", callback_data="admin_add_user"),
         telebot.types.InlineKeyboardButton("➖ Remove User", callback_data="admin_rem_user")
     )
-    # Riga 5: Dimensioni e Giardino
+    # Row 5: Dimensions and Garden
     markup.add(
         telebot.types.InlineKeyboardButton("📐 Garden Size", callback_data="admin_dimensioni"),
         telebot.types.InlineKeyboardButton("🌱 Show Garden", callback_data="admin_giardino")
     )
     
-    testo = "🔧 *Admin Panel*\n\nChoose the operation you wish to perform:"
-    bot.send_message(message.chat.id, testo, reply_markup=markup, parse_mode="Markdown")
+    message_text = "🔧 *Admin Panel*\n\nChoose the operation you wish to perform:"
+    bot.send_message(message.chat.id, message_text, reply_markup=markup, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("admin_"))
 def handle_admin_callbacks(call):
     bot.answer_callback_query(call.id)
-    azione = call.data.replace("admin_", "")
+    action_str = call.data.replace("admin_", "")
     
     msg = call.message
     
-    if azione == "add_slot":
+    if action_str == "add_slot":
         handle_add_slot(msg)
-    elif azione == "rem_slot":
+    elif action_str == "rem_slot":
         handle_remove_slot(msg)
-    elif azione == "add_device":
+    elif action_str == "add_device":
         handle_add_device(msg)
-    elif azione == "rem_device":
+    elif action_str == "rem_device":
         handle_remove_device(msg)
-    elif azione == "add_plant":
+    elif action_str == "add_plant":
         handle_add_plant(msg)
-    elif azione == "rem_plant":
+    elif action_str == "rem_plant":
         handle_remove_plant(msg)
-    elif azione == "add_user":
+    elif action_str == "add_user":
         handle_add_user(msg)
-    elif azione == "rem_user":
+    elif action_str == "rem_user":
         handle_remove_user(msg)
-    elif azione == "dimensioni":
+    elif action_str == "dimensions":
         handle_set_dimensions(msg)
-    elif azione == "giardino":
+    elif action_str == "garden":
         handle_show_garden(msg)
 
-def handle_menu_posizione(message):
+def handle_menu_location(message):
     # Create a Reply Keyboard (bottom bar) with native GPS permission button
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
     btn_pos = telebot.types.KeyboardButton("📍 Send my GPS location", request_location=True)
     markup.add(btn_pos)
     
-    testo = (
+    message_text = (
         "🌍 *Weather Location Settings*\n\n"
         "Press the button below to send the system your exact GPS coordinates.\n\n"
         "💡 _If the garden is in another city, simply type the command:_\n"
         "`/city CityName,IT` (e.g. `/city Turin,IT`)"
     )
-    bot.send_message(message.chat.id, testo, reply_markup=markup, parse_mode="Markdown")
+    bot.send_message(message.chat.id, message_text, reply_markup=markup, parse_mode="Markdown")
  
 
 @bot.message_handler(commands=['crop'])
 
 
 
-def handle_coltura(message):
+def handle_crop(message):
     try:
-        # 1. Chiediamo al catalogo la lista AGGIORNATA degli slot
+        # 1. Get the UPDATED list of slots from the catalog
         slots = requests.get(STRATEGY_REST_URL, timeout=5).json()
         
         if not slots:
@@ -311,12 +311,12 @@ def handle_coltura(message):
 
         markup = telebot.types.InlineKeyboardMarkup()
         
-        # 2. Creiamo un bottone dinamicamente per ogni slot trovato nel file JSON
+        # 2. Create a button dynamically for each slot found in the JSON file
         for s in slots:
             slot_id = s.get("slotID")
             slot_name = s.get("slotName", f"Zone {slot_id}")
             
-            # Crea il bottone e aggiungilo alla tastiera
+            # Create the button and add it to the keyboard
             btn = telebot.types.InlineKeyboardButton(f"🌱 {slot_name} ({slot_id})", callback_data=f"slot_{slot_id}")
             markup.add(btn)
         
@@ -327,8 +327,7 @@ def handle_coltura(message):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("slot_"))
 def handle_slot_selection(call):
-    # INVECE di usare lo split che taglia le parole, "cancelliamo" solo la parola "slot_" 
-    # Così se arriva "slot_P1_R1", rimane esattamente "P1_R1" intatto!
+
     selected_slot = call.data.replace("slot_", "")
     
     try:
@@ -347,12 +346,12 @@ def handle_slot_selection(call):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("plant_"))
 def handle_crop_selection(call):
-    # Esempio di cosa ci arriva: "plant_P3_P1_R1"
-    stringa_dati = call.data.replace("plant_", "") # Diventa "P3_P1_R1"
+    # exemple of callback data : plant_P3_P1_R1
+    stringa_dati = call.data.replace("plant_", "") 
     pezzi = stringa_dati.split("_")
     
-    plant_id = pezzi[0] # Prende "P3"
-    selected_slot = "_".join(pezzi[1:]) # Prende tutto il resto e lo riunisce (es. "P1_R1")
+    plant_id = pezzi[0] # takes "P3"
+    selected_slot = "_".join(pezzi[1:]) # takes the rest of the string and joins them (eg. "P1_R1")
     
     bot.answer_callback_query(call.id, f"Updating the system...")
     
@@ -370,18 +369,18 @@ def handle_crop_selection(call):
             bot.send_message(call.message.chat.id, f"❌ Database error: {data_res['error']}")
             return
         
-        # --- Aggiorniamo la risposta finale ---
+        # --- Update the final response ---
         slots_data = requests.get(STRATEGY_REST_URL, timeout=5).json()
         strategies_data = requests.get(f"{CATALOG_REST_URL}/strategies", timeout=5).json()
         
         dettaglio_slot = []
         for slot in slots_data:
             id_pianta = slot.get("plantID")
-            nome_pianta = "unknown"
+            crop_name = "unknown"
             if id_pianta in strategies_data:
-                nome_pianta = strategies_data[id_pianta]["name"]
+                crop_name = strategies_data[id_pianta]["name"]
                 
-            dettaglio_slot.append(f"slot {slot.get('slotID')}: {nome_pianta}")
+            dettaglio_slot.append(f"slot {slot.get('slotID')}: {crop_name}")
         
         testo_finale = f"✅ Configuration updated!\n\n{', '.join(dettaglio_slot).capitalize()}."
         bot.send_message(call.message.chat.id, testo_finale)
@@ -391,19 +390,19 @@ def handle_crop_selection(call):
     
 
 
-# --- 5. AGGIUNGI E RIMUOVI SLOT ---
+# --- ADD AND REMOVE SLOTS ---
 
-# COMANDO: AGGIUNGI SLOT (POST)
+# ADD SLOT COMMAND (POST)
 @bot.message_handler(commands=['addslot'])
 def handle_add_slot(message):
-    testo = (
+    message_text = (
         "🌱 *Add a new Slot* 🌱\n"
         "To cultivate a zone, type the grid coordinate, the Crop ID and the Device ID separated by commas:\n\n"
         "`Coordinate, Crop ID, Device ID`\n\n"
         "Example: *P1_R2, P3, RPi_003*\n"
         "_(Use /garden to see available coordinates)_"
     )
-    msg = bot.send_message(message.chat.id, testo, parse_mode="Markdown")
+    msg = bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
     bot.register_next_step_handler(msg, process_add_slot)
 
 def process_add_slot(message):
@@ -415,9 +414,9 @@ def process_add_slot(message):
             return
             
         slot_id, plant_id, device_id = parts
-        slot_id = slot_id.upper() # Forza il maiuscolo per evitare errori (es. p1_r2 diventa P1_R2)
+        slot_id = slot_id.upper() # Force uppercase to avoid errors (eg. p1_r2 becomes P1_R2)
         
-        # Validazione della coordinata: deve iniziare con P e contenere _R
+        # Validation of the coordinate: must start with P and contain _R
         if not slot_id.startswith("P") or "_R" not in slot_id:
             bot.send_message(message.chat.id, "❌ Error: Slot coordinate must be in Px_Ry format (e.g. P1_R2). Try again with /addslot.")
             return
@@ -435,7 +434,7 @@ def process_add_slot(message):
             )
             return
         
-        # Creazione dello slot
+        # Slot creation
         payload = {
             "slotID": slot_id,
             "plantID": plant_id,
@@ -454,17 +453,17 @@ def process_add_slot(message):
             # Print success and the UPDATED garden grid
             bot.send_message(
                 message.chat.id, 
-                f"✅ *Success!* Device `{device_id}` is now irrigating zone `{slot_id}`.\n\nHere is your updated garden:\n\n{genera_griglia_testo()}", 
+                f"✅ *Success!* Device `{device_id}` is now irrigating zone `{slot_id}`.\n\nHere is your updated garden:\n\n{generate_text_grid()}", 
                 parse_mode="Markdown"
             )
             
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Connection error: {e}")
-# COMANDO: RIMUOVI SLOT (DELETE)
+# COMMAND: REMOVE SLOT (DELETE)
 @bot.message_handler(commands=['removeslot'])
 def handle_remove_slot(message):
     try:
-        # Chiediamo al catalogo quali slot esistono attualmente
+        # Ask the catalog which slots currently exist
         slots = requests.get(STRATEGY_REST_URL, timeout=5).json()
         
         if not slots:
@@ -473,7 +472,7 @@ def handle_remove_slot(message):
             
         markup = telebot.types.InlineKeyboardMarkup()
         for s in slots:
-            # Creiamo un bottone rosso per ogni slot trovato
+            # Creating a red button for each slot found
             btn = telebot.types.InlineKeyboardButton(f"🗑️ Delete {s.get('slotName', s['slotID'])}", callback_data=f"del_slot_{s['slotID']}")
             markup.add(btn)
             
@@ -484,14 +483,14 @@ def handle_remove_slot(message):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("del_slot_"))
 def process_del_slot(call):
-    # Rimuoviamo l'animazione di caricamento sul bottone
+    # Remove the loading animation on the button
     bot.answer_callback_query(call.id)
     
-    # Estraiamo l'ID (es. S1, S2, S3)
+    # Extract the ID
     slot_id = call.data.split("_")[2]
     
     try:
-        # Facciamo una DELETE passando l'ID direttamente nell'URL (come vuole il tuo endpoint)
+        # Making a DELETE by passing the ID directly in the URL 
         response = requests.delete(f"{STRATEGY_REST_URL}/{slot_id}", timeout=5)
         response.raise_for_status()
         
@@ -504,17 +503,17 @@ def process_del_slot(call):
     except Exception as e:
         bot.send_message(call.message.chat.id, f"❌ Connection error: {e}")
 
-# --- AVVIO DEL SISTEMA ---
-# --- GESTIONE PREZZO ACQUA ---
+# ---   SYSTEM STARTUP ---
+# --- WATER PRICE MANAGEMENT ---
 @bot.message_handler(commands=['price'])
-def handle_prezzo(message):
+def handle_price(message):
     try:
-        # 1. Chiediamo il prezzo attuale al catalogo
+        # 1. Ask the catalog for the current price
         response = requests.get(f"{CATALOG_REST_URL}/price", timeout=5)
         response.raise_for_status()
         prezzo_attuale = response.json()
         
-        # 2. Creiamo il bottone per modificarlo
+        # 2. Create the button to edit it
         markup = telebot.types.InlineKeyboardMarkup()
         btn_modifica = telebot.types.InlineKeyboardButton("✏️ Edit Price", callback_data="modifica_prezzo")
         markup.add(btn_modifica)
@@ -531,11 +530,11 @@ def handle_modifica_prezzo(call):
 
 def salva_nuovo_prezzo(message):
     try:
-        nuovo_prezzo = float(message.text.replace(',', '.')) 
-        payload = {"NewWaterPricePerM3": nuovo_prezzo}
+        new_price = float(message.text.replace(',', '.')) 
+        payload = {"NewWaterPricePerM3": new_price}
         response = requests.put(f"{CATALOG_REST_URL}/price", json=payload, timeout=5)
         response.raise_for_status()
-        bot.send_message(message.chat.id, f"✅ Price successfully updated to *{nuovo_prezzo} €/m³*!", parse_mode="Markdown")
+        bot.send_message(message.chat.id, f"✅ Price successfully updated to *{new_price} €/m³*!", parse_mode="Markdown")
     except ValueError:
         bot.send_message(message.chat.id, "❌ Error: Enter a valid number (e.g. 2.5). Try again using /price.")
     except Exception as e:
@@ -543,7 +542,7 @@ def salva_nuovo_prezzo(message):
 
 # --- DEVICE MANAGEMENT ---
 @bot.message_handler(commands=['devices'])
-def handle_dispositivi(message):
+def handle_devices(message):
     try:
         devices = requests.get(f"{CATALOG_REST_URL}/devices", timeout=5).json()
         slots = requests.get(STRATEGY_REST_URL, timeout=5).json()
@@ -556,13 +555,13 @@ def handle_dispositivi(message):
             if d_id:
                 dev_slots.setdefault(d_id, []).append(s)
 
-        testo = "🖥️ *IoT Device Status*\n\n"
+        message_text = "🖥️ *IoT Device Status*\n\n"
         for d in devices:
             d_id = d['deviceID']
             status_icon = "🟢" if d.get('status') == 'active' else "🔴"
-            testo += f"{status_icon} 🖥️ *{d['deviceName']}* (`{d_id}`)\n"
-            testo += f"  📡 Sensors: {', '.join(d.get('sensors', []))}\n"
-            testo += f"  ⚙️ Actuators: {', '.join(d.get('actuators', []))}\n"
+            message_text += f"{status_icon} 🖥️ *{d['deviceName']}* (`{d_id}`)\n"
+            message_text += f"  📡 Sensors: {', '.join(d.get('sensors', []))}\n"
+            message_text += f"  ⚙️ Actuators: {', '.join(d.get('actuators', []))}\n"
 
             # Show assigned slots with crop
             assigned = dev_slots.get(d_id, [])
@@ -570,27 +569,27 @@ def handle_dispositivi(message):
                 for s in assigned:
                     p_id = s.get("plantID")
                     p_name = strategies.get(p_id, {}).get("name", "Unknown") if p_id else "—"
-                    testo += f"  📍 Slot: `{s['slotID']}` · 🌿 Crop: *{p_name}*\n"
+                    message_text += f"  📍 Slot: `{s['slotID']}` · 🌿 Crop: *{p_name}*\n"
             else:
-                testo += "  📍 Slot: `—` · 🌿 Crop: *No assignment*\n"
-            testo += "\n"
+                message_text += "  📍 Slot: `—` · 🌿 Crop: *No assignment*\n"
+            message_text += "\n"
 
-        bot.send_message(message.chat.id, testo, parse_mode="Markdown")
+        bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Error contacting the Catalog: {e}")
 
-# --- 6. AGGIUNGI E RIMUOVI DISPOSITIVI (DEVICES) ---
+# ---ADD AND REMOVE DEVICES ---
 
-# COMANDO: AGGIUNGI DEVICE (POST)
+# ADD DEVICE COMMAND (POST)
 @bot.message_handler(commands=['adddevice'])
 def handle_add_device(message):
-    testo = (
+    message_text = (
         "📟 *Register a new IoT Device* 📟\n"
         "Type the device ID and Name, separated by a comma:\n\n"
         "`Device ID, Device Name`\n\n"
         "Example: *RPi_003, GardenGateway_003*"
     )
-    msg = bot.send_message(message.chat.id, testo, parse_mode="Markdown")
+    msg = bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
     bot.register_next_step_handler(msg, process_add_device)
 
 def process_add_device(message):
@@ -603,7 +602,6 @@ def process_add_device(message):
             
         device_id, device_name = parts
         
-        # Prepariamo un payload completo per il catalogo (aggiungendo i sensori standard di default)
         payload = {
             "deviceID": device_id,
             "deviceName": device_name,
@@ -629,7 +627,7 @@ def process_add_device(message):
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Connection error: {e}")
 
-# COMANDO: RIMUOVI DEVICE (DELETE)
+# COMMAND: REMOVE DEVICE (DELETE)
 @bot.message_handler(commands=['removedevice'])
 def handle_remove_device(message):
     try:
@@ -666,17 +664,17 @@ def process_del_device(call):
             
     except Exception as e:
         bot.send_message(call.message.chat.id, f"❌ Connection error: {e}")
-# --- 8. GESTIONE PIANTE / STRATEGIE ---
+# --- ADD PLANTS / STRATEGIES ---
 
 @bot.message_handler(commands=['addplant'])
 def handle_add_plant(message):
-    testo = (
+    message_text = (
         "🌿 *Add a new Crop to the Catalog* 🌿\n"
         "Type the data separated by commas in this format:\n\n"
         "`Crop ID, Name, Minimum Moisture Threshold`\n\n"
         "Example: *P3, Lettuce, 50.0*"
     )
-    msg = bot.send_message(message.chat.id, testo, parse_mode="Markdown")
+    msg = bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
     bot.register_next_step_handler(msg, process_add_plant)
 
 def process_add_plant(message):
@@ -689,7 +687,7 @@ def process_add_plant(message):
             
         plant_id, name, threshold_str = parts
         
-        # Convertiamo la soglia in numero (per evitare che qualcuno scriva lettere)
+        # Convert the threshold to a number 
         try:
             threshold = float(threshold_str)
         except ValueError:
@@ -751,33 +749,33 @@ def process_del_plant(call):
     except Exception as e:
         bot.send_message(call.message.chat.id, f"❌ Connection error: {e}")
 
-# --- VISUALIZZAZIONE SOGLIE STRATEGIE ---
+# --- DISPLAY STRATEGY THRESHOLDS ---
 @bot.message_handler(commands=['thresholds'])
-def handle_soglie(message):
+def handle_thresholds(message):
     try:
         # Retrieve strategies from catalog
         strategies = requests.get(f"{CATALOG_REST_URL}/strategies", timeout=5).json()
         
-        testo = "📊 *Available Crops & Irrigation Thresholds*\n\n"
+        message_text = "📊 *Available Crops & Irrigation Thresholds*\n\n"
         
         # Iterate over the strategies dictionary
         for plant_id, info in strategies.items():
-            testo += f"🌿 *{info['name']}* (`{plant_id}`)\n"
-            testo += f"  💧 Pump activates below: {info['min_moisture_threshold']}%\n\n"
+            message_text += f"🌿 *{info['name']}* (`{plant_id}`)\n"
+            message_text += f"  💧 Pump activates below: {info['min_moisture_threshold']}%\n\n"
             
-        bot.send_message(message.chat.id, testo, parse_mode="Markdown")
+        bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
         
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Error contacting the Catalog: {e}")
 
-# --- GESTIONE PROFILO E CHAT ID ---
+# --- MANAGE PROFILE AND CHAT ID ---
 @bot.message_handler(commands=['profile'])
-def handle_profilo(message):
+def handle_profile(message):
     try:
-        # Recuperiamo la lista utenti dal catalogo
+        # Retrieve user list from catalog
         users = requests.get(f"{CATALOG_REST_URL}/users", timeout=5).json()
         
-        testo = (
+        message_text = (
             f"👤 *Your Telegram Chat ID:* `{message.chat.id}`\n\n"
             "To receive emergency notifications on this phone, "
             "select your profile from the list below:"
@@ -785,24 +783,24 @@ def handle_profilo(message):
         
         markup = telebot.types.InlineKeyboardMarkup()
         for u in users:
-            # Creiamo un bottone per ogni utente presente nel file JSON
+            # Create a button for each user present in the JSON file
             btn = telebot.types.InlineKeyboardButton(f"🙋‍♂️ I am {u['userName']}", callback_data=f"link_user_{u['userID']}")
             markup.add(btn)
             
-        bot.send_message(message.chat.id, testo, reply_markup=markup, parse_mode="Markdown")
+        bot.send_message(message.chat.id, message_text, reply_markup=markup, parse_mode="Markdown")
         
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Error contacting the Catalog: {e}")
 @bot.callback_query_handler(func=lambda call: call.data.startswith("link_user_"))
 def handle_link_user(call):
-    # Estraiamo l'ID utente (es. U_001) e il Chat ID attuale
+    # Extract user ID and current Chat ID
     user_id = call.data.replace("link_user_", "")
     chat_id = call.message.chat.id
     
     bot.answer_callback_query(call.id) 
     
     try:
-        # Prepariamo il payload per la PUT degli utenti
+        # Prepare payload for users PUT
         payload = {
             "userID": user_id,
             "telegramChatID": str(chat_id)
@@ -816,12 +814,12 @@ def handle_link_user(call):
     except Exception as e:
         bot.send_message(call.message.chat.id, f"❌ Error during linking: {e}")
 
-# --- 9. GESTIONE UTENTI (ADMIN) ---
+# --- USERS MANAGEMENT ---
 
 @bot.message_handler(commands=['adduser'])
 def handle_add_user(message):
-    testo = "👤 *Add a new User* 👤\nType the data in this format:\n`User ID, Name`\nExample: *U_003, Luigi*"
-    msg = bot.send_message(message.chat.id, testo, parse_mode="Markdown")
+    message_text = "👤 *Add a new User* 👤\nType the data in this format:\n`User ID, Name`\nExample: *U_003, Luigi*"
+    msg = bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
     bot.register_next_step_handler(msg, process_add_user)
 
 def process_add_user(message):
@@ -833,7 +831,7 @@ def process_add_user(message):
             
         user_id, user_name = parts
         
-        # Inizializziamo il telegramChatID vuoto. L'utente lo riempirà poi usando /profilo
+        # Initialize the empty telegramChatID. The user will fill it in later using /profile
         payload = {
             "userID": user_id,
             "userName": user_name,
@@ -881,56 +879,56 @@ def process_del_user(call):
     except Exception as e:
         bot.send_message(call.message.chat.id, f"❌ Error: {e}")
 
-# --- 10. GESTIONE POSIZIONE METEO ---
+# --- WEATHER LOCATION MANAGEMENT ---
 
-# OPZIONE A: Posizione Testuale (es. /citta Torino,IT)
+# OPTION A: Text Location (e.g. /city Turin,IT)
 @bot.message_handler(commands=['city'])
-def handle_citta(message):
+def handle_city(message):
     msg = bot.send_message(message.chat.id, "🌍 *Set Weather City*\nEnter the city name (e.g. `Turin,IT`) or coordinates (e.g. `45.07,7.68`):", parse_mode="Markdown")
-    bot.register_next_step_handler(msg, process_citta)
+    bot.register_next_step_handler(msg, process_city)
 
-def process_citta(message):
-    nuova_posizione = message.text.strip()
+def process_city(message):
+    new_location = message.text.strip()
     try:
-        requests.put(f"{CATALOG_REST_URL}/location", json={"location": nuova_posizione}, timeout=5).raise_for_status()
-        bot.send_message(message.chat.id, f"✅ Weather location updated to: *{nuova_posizione}*", parse_mode="Markdown")
+        requests.put(f"{CATALOG_REST_URL}/location", json={"location": new_location}, timeout=5).raise_for_status()
+        bot.send_message(message.chat.id, f"✅ Weather location updated to: *{new_location}*", parse_mode="Markdown")
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Error updating location: {e}")
 
-# OPZIONE B: Posizione GPS con il tasto speciale di Telegram
+# OPTION B: GPS Location with special Telegram button
 @bot.message_handler(commands=['location'])
 def handle_gps_location(message):
-    # Creiamo una tastiera "Reply" (quelle in basso) con un bottone speciale nativo di Telegram
+    # Create a Reply Keyboard (bottom bar) with native Telegram button
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
     btn_pos = telebot.types.KeyboardButton("📍 Send my GPS location", request_location=True)
     markup.add(btn_pos)
     
     bot.send_message(message.chat.id, "Press the button below to send your exact GPS coordinates for the Weather service:", reply_markup=markup)
 
-# Questo handler scatta in automatico quando l'utente preme il bottone GPS
+# This handler triggers automatically when the user presses the GPS button
 @bot.message_handler(content_types=['location'])
 def handle_received_location(message):
     lat = message.location.latitude
     lon = message.location.longitude
-    nuova_posizione = f"{lat},{lon}"
+    new_location = f"{lat},{lon}"
     
     try:
-        requests.put(f"{CATALOG_REST_URL}/location", json={"location": nuova_posizione}, timeout=5).raise_for_status()
-        # Rimuoviamo la tastiera speciale e diamo conferma
+        requests.put(f"{CATALOG_REST_URL}/location", json={"location": new_location}, timeout=5).raise_for_status()
+        # Remove special keyboard and confirm
         bot.send_message(
             message.chat.id, 
-            f"✅ GPS Location received and saved!\nCoordinates: `{nuova_posizione}`\nThe irrigation system will now check the weather for this zone.", 
+            f"✅ GPS Location received and saved!\nCoordinates: `{new_location}`\nThe irrigation system will now check the weather for this zone.", 
             parse_mode="Markdown", 
             reply_markup=telebot.types.ReplyKeyboardRemove()
         )
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Error updating location: {e}")
 
-# --- GESTIONE VISIVA DEL GIARDINO (GRIGLIA) ---
+# --- VISUAL GARDEN MANAGEMENT (GRID) ---
 
 
-def genera_griglia_testo():
-    """Genera la griglia visiva usando le Emoji di Telegram"""
+def generate_text_grid():
+    """Generates the visual grid using Telegram Emojis"""
     try:
         grid_data = requests.get(f"{CATALOG_REST_URL}/grid", timeout=5).json()
         slots_data = requests.get(STRATEGY_REST_URL, timeout=5).json()
@@ -938,47 +936,47 @@ def genera_griglia_testo():
         max_pumps = grid_data.get("max_pumps", 3)
         max_taps = grid_data.get("max_taps", 3)
         
-        slot_occupati = [s.get("slotID") for s in slots_data if s.get("status") == "active"]
+        occupied_slots = [s.get("slotID") for s in slots_data if s.get("status") == "active"]
 
-        # Costruiamo l'intestazione superiore (R1, R2, ecc.)
-        griglia_str = "      " # Spazio iniziale per allineare
+        # Build the top header (R1, R2, etc.)
+        grid_str = "      " # Initial space to align
         for r in range(1, max_taps + 1):
-            griglia_str += f"R{r}  "
-        griglia_str += "\n"
+            grid_str += f"R{r}  "
+        grid_str += "\n"
 
-        # Disegniamo la terra e le piante
+        # Draw dirt and plants
         for p in range(1, max_pumps + 1):
-            riga = f"*P{p}* " # Mettiamo P1, P2 in grassetto
+            row_str = f"*P{p}* " # Put P1, P2 in bold
             for r in range(1, max_taps + 1):
-                coordinata = f"P{p}_R{r}"
+                coordinate = f"P{p}_R{r}"
                 
-                if coordinata in slot_occupati:
-                    riga += "🌱  " # Piantina (Occupato)
+                if coordinate in occupied_slots:
+                    row_str += "🌱  " # Crop (Occupied)
                 else:
-                    riga += "🟫  " # Terra (Libero)
+                    row_str += "🟫  " # Dirt (Empty)
                     
-            griglia_str += riga + "\n"
+            grid_str += row_str + "\n"
 
-        # Aggiungiamo una piccola legenda in fondo
-        legenda = "\n_Legend:_  🌱 `Occupied`  |  🟫 `Empty`"
+        # Add a small legend at the bottom
+        legend = "\n_Legend:_  🌱 `Occupied`  |  🟫 `Empty`"
         
-        # NOTA: Niente più backtick (```), inviamo direttamente il testo formattato!
-        return griglia_str + legenda
+        # NOTE: No more backticks (```), send the formatted message_text directly!
+        return grid_str + legend
         
     except Exception as e:
         return f"Error loading grid: {e}"
 
 
-# COMANDO: IMPOSTA DIMENSIONI GIARDINO
+# COMMAND: SET GARDEN DIMENSIONS
 @bot.message_handler(commands=['gardensize'])
 def handle_set_dimensions(message):
-    testo = (
+    message_text = (
         "📐 *Set Garden Dimensions*\n"
         "Type the number of Rows (Pumps) and the number of Taps (Plants) per row, "
         "separated by a comma.\n\n"
         "Example: *3, 4* (3 Rows, 4 Plants each)"
     )
-    msg = bot.send_message(message.chat.id, testo, parse_mode="Markdown")
+    msg = bot.send_message(message.chat.id, message_text, parse_mode="Markdown")
     bot.register_next_step_handler(msg, process_set_dimensions)
 
 def process_set_dimensions(message):
@@ -990,7 +988,7 @@ def process_set_dimensions(message):
         new_max_pumps = parts[0]
         new_max_taps = parts[1]
         
-        # Recupera tutti gli slot correnti per verificare i conflitti
+        # Fetch all current slots to check for conflicts
         try:
             slots_res = requests.get(f"{CATALOG_REST_URL}/slots", timeout=5).json()
         except:
@@ -999,7 +997,7 @@ def process_set_dimensions(message):
         out_of_bounds = []
         for slot in slots_res:
             slot_id = slot.get("slotID", "")
-            # slot_id è tipo P1_R2.
+            # slot_id is like P1_R2.
             try:
                 p_str, r_str = slot_id.split('_')
                 p_num = int(p_str[1:])
@@ -1010,8 +1008,8 @@ def process_set_dimensions(message):
                 pass
                 
         if len(out_of_bounds) > 0:
-            # Ci sono conflitti
-            testo_conflitti = (
+            # There are conflicts
+            conflict_text = (
                 "⚠️ *Warning!*\n"
                 f"You want to reduce dimensions to {new_max_pumps} rows and {new_max_taps} taps, "
                 "but there are plants configured in slots that will be deleted:\n"
@@ -1019,21 +1017,21 @@ def process_set_dimensions(message):
                 "Do you want to proceed and permanently delete these configurations?"
             )
             markup = telebot.types.InlineKeyboardMarkup()
-            # Salviamo le nuove dimensioni nella callback data. (Max 64 bytes per callback_data)
-            btn_si = telebot.types.InlineKeyboardButton("✅ Confirm and Remove", callback_data=f"dim_ok_{new_max_pumps}_{new_max_taps}")
+            # Save the new dimensions in the callback data. (Max 64 bytes per callback_data)
+            btn_yes = telebot.types.InlineKeyboardButton("✅ Confirm and Remove", callback_data=f"dim_ok_{new_max_pumps}_{new_max_taps}")
             btn_no = telebot.types.InlineKeyboardButton("❌ Cancel", callback_data="dim_no")
-            markup.row(btn_si, btn_no)
+            markup.row(btn_yes, btn_no)
             
-            bot.send_message(message.chat.id, testo_conflitti, parse_mode="Markdown", reply_markup=markup)
+            bot.send_message(message.chat.id, conflict_text, parse_mode="Markdown", reply_markup=markup)
             return
 
-        # Se non ci sono conflitti, aggiorna subito
+        # If no conflicts, update immediately
         payload = {"max_pumps": new_max_pumps, "max_taps": new_max_taps}
         requests.put(f"{CATALOG_REST_URL}/grid", json=payload, timeout=5).raise_for_status()
         
         bot.send_message(
             message.chat.id, 
-            f"✅ Dimensions updated!\nHere is your new garden:\n{genera_griglia_testo()}", 
+            f"✅ Dimensions updated!\nHere is your new garden:\n{generate_text_grid()}", 
             parse_mode="Markdown" 
         )
     except ValueError:
@@ -1056,7 +1054,7 @@ def handle_dim_callback(call):
         new_max_taps = int(parts[3])
         
         try:
-            # 1. Recupera gli slot ed elimina quelli fuori range
+            # 1. Fetch slots and delete those out of range
             slots_res = requests.get(f"{CATALOG_REST_URL}/slots", timeout=5).json()
             deleted_count = 0
             for slot in slots_res:
@@ -1071,24 +1069,24 @@ def handle_dim_callback(call):
                 except:
                     pass
             
-            # 2. Aggiorna la grid
+            # 2. Update grid
             payload = {"max_pumps": new_max_pumps, "max_taps": new_max_taps}
             requests.put(f"{CATALOG_REST_URL}/grid", json=payload, timeout=5).raise_for_status()
             
             bot.send_message(
                 call.message.chat.id, 
-                f"✅ Dimensions updated and {deleted_count} slots removed!\nHere is your new garden:\n{genera_griglia_testo()}", 
+                f"✅ Dimensions updated and {deleted_count} slots removed!\nHere is your new garden:\n{generate_text_grid()}", 
                 parse_mode="Markdown" 
             )
         except Exception as e:
             bot.send_message(call.message.chat.id, f"❌ Update error: {e}")
 
-# COMANDO: VISUALIZZA GIARDINO
+# COMMAND: SHOW GARDEN
 @bot.message_handler(commands=['garden'])
 def handle_show_garden(message):
     bot.send_message(
         message.chat.id, 
-        f"🌱 *Map of your Garden:*\n{genera_griglia_testo()}", 
+        f"🌱 *Map of your Garden:*\n{generate_text_grid()}", 
         parse_mode="Markdown"
     )
 
@@ -1096,17 +1094,13 @@ def handle_show_garden(message):
 
 
 if __name__ == "__main__":
-    # 1. Setup MQTT in background
     mqtt_client = mqtt.Client()
     mqtt_client.on_connect = on_connect
     mqtt_client.on_message = on_message
-    
     try:
         mqtt_client.connect(BROKER_IP, 1883, 60)
-        mqtt_client.loop_start() # Avvia MQTT in un thread separato
+        mqtt_client.loop_start()
     except Exception as e:
-        print(f"⚠️ Warning: Unable to connect to MQTT broker. The bot will start anyway. ({e})")
-        
-    # 2. Avvio Bot Telegram in primo piano
+        print(f"⚠️ Warning: Unable to connect to MQTT broker. The bot will start anyway. ({e})") 
     print("[BOT] Telegram Bot listening...")
     bot.infinity_polling()

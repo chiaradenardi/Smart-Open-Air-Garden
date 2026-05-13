@@ -12,7 +12,7 @@ class MultiSensorSim:
         self.devices = {}
         self.clientID = clientID
         
-        # 1. Recupero dinamico dei dispositivi dal Catalogo
+        # 1. get devices from catalog
         self.get_devices_from_catalog()
             
         self.client = MyMQTT(clientID, broker, port, self)
@@ -56,30 +56,30 @@ class MultiSensorSim:
         if isinstance(msg, str):
             msg = json.loads(msg)
 
-        # Supporto per array SenML: estraiamo il primo dizionario se è una lista
+        # support for SenML array: extract first dictionary if list
         if isinstance(msg, list) and len(msg) > 0:
             msg = msg[0]
 
         target_device = topic.split('/')[1]
         
         if target_device in self.devices:
-            # Controlla sia la vecchia chiave 'status' che la nuova chiave 'v' (SenML)
+            # check old key 'status' and new key 'v' (SenML)
             status = msg.get("status")
             v_value = msg.get("v")
             
-            # Accende se status è "ON" oppure se il valore SenML è 1
+            # turns on if status is "ON" or if the SenML value is 1
             if status == "ON" or v_value == 1:
                 self.devices[target_device]["pump_active"] = True
-                print(f"[SIM] {target_device} -> POMPA ACCESA")
+                print(f"[SIM] {target_device} -> Pump turned ON")
             elif status == "OFF" or v_value == 0:
                 self.devices[target_device]["pump_active"] = False
-                print(f"[SIM] {target_device} -> POMPA SPENTA")
+                print(f"[SIM] {target_device} -> Pump turned OFF")
 
     def run_cycle(self):
-        """Aggiorna e pubblica i dati di tutti i sensori trovati"""
+        # update and publish data of all sensors found
         timestamp = int(time.time())
         if not self.devices:
-            print("[SIM] Nessun dispositivo da simulare. Verificare il Catalogo.")
+            print("[SIM] No device to simulate. Check the Catalog.")
             return
 
         for d_id, data in self.devices.items():
@@ -97,10 +97,10 @@ class MultiSensorSim:
             ]
 
             self.client.myPublish(data["topic_pub"], packet)
-            print(f"[SIM] {d_id} | Umidità: {round(data['moisture'], 1)}% | Pompa: {'ON' if data['pump_active'] else 'OFF'}")
+            print(f"[SIM] {d_id} | Humidity: {round(data['moisture'], 1)}% | Pump: {'ON' if data['pump_active'] else 'OFF'}")
 
 if __name__ == "__main__":
-    # URL del catalogo (localhost perché lo script gira fuori da Docker)
+    # URL of the catalog (localhost because the script runs outside Docker)
     CATALOG_URL = "http://localhost:8080" 
     
     sim = MultiSensorSim("MultiSim_Dinamico", "localhost", 1883, CATALOG_URL)
