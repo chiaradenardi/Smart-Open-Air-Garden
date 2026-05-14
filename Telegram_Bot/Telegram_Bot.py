@@ -104,13 +104,13 @@ def handle_start(message):
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     
     # Row 1: Main management
-    btn_crop = telebot.types.InlineKeyboardButton("🌿 Crop Management", callback_data="menu_coltura")
-    btn_devices = telebot.types.InlineKeyboardButton("🖥️ Device Status", callback_data="menu_dispositivi")
+    btn_crop = telebot.types.InlineKeyboardButton("📊 Crop Management", callback_data="menu_crop")
+    btn_devices = telebot.types.InlineKeyboardButton("🖥️ Device Status", callback_data="menu_devices")
     markup.add(btn_crop, btn_devices)
     
     # Row 2: Data and Settings
-    btn_price = telebot.types.InlineKeyboardButton("💶 Water Price", callback_data="menu_prezzo")
-    btn_thresholds = telebot.types.InlineKeyboardButton("📊 Available Crops", callback_data="menu_soglie")
+    btn_price = telebot.types.InlineKeyboardButton("💶 Water Price", callback_data="menu_price")
+    btn_thresholds = telebot.types.InlineKeyboardButton("🌿 Available Crops", callback_data="menu_thresholds")
     markup.add(btn_price, btn_thresholds)
     
     # Row 3: Live Status
@@ -119,11 +119,11 @@ def handle_start(message):
     
     # Row 4: Admin and Location
     btn_admin = telebot.types.InlineKeyboardButton("🔧 Admin Management", callback_data="menu_admin")
-    btn_location = telebot.types.InlineKeyboardButton("🌍 Set Weather Location", callback_data="menu_posizione")
+    btn_location = telebot.types.InlineKeyboardButton("🌍 Set Weather Location", callback_data="menu_location")
     markup.add(btn_admin, btn_location)
     
     # Row 4: User Profile 
-    btn_profile = telebot.types.InlineKeyboardButton("👤 Link Profile (Receive Notifications)", callback_data="menu_profilo")
+    btn_profile = telebot.types.InlineKeyboardButton("👤 Link Profile (Receive Notifications)", callback_data="menu_profile")
     markup.add(btn_profile)
     
     bot.reply_to(message, welcome_message, reply_markup=markup, parse_mode="Markdown")
@@ -246,8 +246,8 @@ def handle_admin_panel(message):
     )
     # Row 5: Dimensions and Garden
     markup.add(
-        telebot.types.InlineKeyboardButton("📐 Garden Size", callback_data="admin_dimensioni"),
-        telebot.types.InlineKeyboardButton("🌱 Show Garden", callback_data="admin_giardino")
+        telebot.types.InlineKeyboardButton("📐 Garden Size", callback_data="admin_dimensions"),
+        telebot.types.InlineKeyboardButton("🌱 Show Garden", callback_data="admin_garden")
     )
     
     message_text = "🔧 *Admin Panel*\n\nChoose the operation you wish to perform:"

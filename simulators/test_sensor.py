@@ -43,7 +43,7 @@ class MultiSensorSim:
         self.client.start()
         for d_id in self.devices:
             self.client.mySubscribe(self.devices[d_id]["topic_sub"])
-            print(f"[SIM] In ascolto per {d_id} su: {self.devices[d_id]['topic_sub']}")
+            print(f"[SIM] Listening for {d_id} on: {self.devices[d_id]['topic_sub']}")
 
     def stopSim(self):
         self.client.stop()

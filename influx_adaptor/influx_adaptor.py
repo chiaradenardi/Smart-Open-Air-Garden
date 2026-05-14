@@ -27,7 +27,7 @@ class InfluxDBAdaptor:
         self.mqtt_client = MyMQTT(clientID,self.broker_ip,self.broker_port,self)
         
     def get_broker_config(self):
-        print("[INIT] Contattando il Service & Resource Catalog via REST...")
+        print("[INIT] Contacting the Service & Resource Catalog via REST...")
         try:
             response = requests.get(self.catalog_url + "/broker", timeout=10)
             response.raise_for_status()

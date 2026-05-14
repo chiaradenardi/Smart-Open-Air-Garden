@@ -117,41 +117,41 @@ services:
       - message-broker
     restart: always
 
-  device-connector:
-    build: ./device_connector
-    image: smart-open-air-garden-device-connector
-    container_name: device-connector
-    environment:
-      - CATALOG_URL=http://service-catalog:8080/broker
-      - DEVICE_ID=RPi_001
-    depends_on:
-      - message-broker
-      - service-catalog
-    restart: always
-
-  device-connector-02:
-    build: ./device_connector
-    image: smart-open-air-garden-device-connector
-    container_name: device-connector-02
-    environment:
-      - CATALOG_URL=http://service-catalog:8080/broker
-      - DEVICE_ID=RPi_002
-    depends_on:
-      - message-broker
-      - service-catalog
-    restart: always
-
-  device-connector-03:
-    build: ./device_connector
-    image: smart-open-air-garden-device-connector
-    container_name: device-connector-03
-    environment:
-      - CATALOG_URL=http://service-catalog:8080/broker
-      - DEVICE_ID=RPi_003
-    depends_on:
-      - message-broker
-      - service-catalog
-    restart: always
+#  device-connector:
+#    build: ./device_connector
+#    image: smart-open-air-garden-device-connector
+#    container_name: device-connector
+#    environment:
+#      - CATALOG_URL=http://service-catalog:8080/broker
+#      - DEVICE_ID=RPi_001
+#    depends_on:
+#      - message-broker
+#      - service-catalog
+#    restart: always
+#
+#  device-connector-02:
+#    build: ./device_connector
+#    image: smart-open-air-garden-device-connector
+#    container_name: device-connector-02
+#    environment:
+#      - CATALOG_URL=http://service-catalog:8080/broker
+#      - DEVICE_ID=RPi_002
+#    depends_on:
+#      - message-broker
+#      - service-catalog
+#    restart: always
+#
+#  device-connector-03:
+#    build: ./device_connector
+#    image: smart-open-air-garden-device-connector
+#    container_name: device-connector-03
+#    environment:
+#      - CATALOG_URL=http://service-catalog:8080/broker
+#      - DEVICE_ID=RPi_003
+#    depends_on:
+#      - message-broker
+#      - service-catalog
+#    restart: always
 
 volumes:
   node_red_data:
