@@ -4,10 +4,10 @@
         "broker_name": "message-broker",
         "port": 1883
     },
-    "waterPricePerM3": 0.004,
+    "waterPricePerM3": 0.005,
     "garden_grid": {
-        "max_pumps": 3,
-        "max_taps": 3
+        "max_pumps": 8,
+        "max_taps": 8
     },
     "devicesList": [
         {
@@ -112,6 +112,23 @@
                 "clientID": "Client_RPi_010",
                 "telemetry_topic": "garden/RPi_010/telemetry",
                 "command_topic": "garden/RPi_010/pump"
+            }
+        },
+        {
+            "deviceID": "RPi_009",
+            "deviceName": "GardenGateway_009",
+            "status": "active",
+            "sensors": [
+                "SoilMoisture",
+                "DHT11"
+            ],
+            "actuators": [
+                "MicroServoPump"
+            ],
+            "config": {
+                "clientID": "Client_RPi_009",
+                "telemetry_topic": "garden/RPi_009/telemetry",
+                "command_topic": "garden/RPi_009/pump"
             }
         }
     ],
@@ -253,6 +270,10 @@
         "P6": {
             "name": "Prezzemolo",
             "min_moisture_threshold": 45.0
+        },
+        "P10": {
+            "name": "Fragola",
+            "min_moisture_threshold": 70.0
         }
     },
     "garden_slots": [
@@ -279,11 +300,18 @@
         },
         {
             "slotID": "P3_R1",
-            "plantID": "P5",
+            "plantID": "P10",
             "deviceID": "RPi_010",
             "slotName": "Zona P3_R1",
             "status": "active"
+        },
+        {
+            "slotID": "P5_R5",
+            "plantID": "P10",
+            "deviceID": "RPi_009",
+            "slotName": "Zone P5_R5",
+            "status": "active"
         }
     ],
-    "garden_location": "45.063006,7.661269"
+    "garden_location": "45.058614,7.6567"
 }

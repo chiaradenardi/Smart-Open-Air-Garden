@@ -85,7 +85,7 @@ class MultiSensorSim:
         for d_id, data in self.devices.items():
             if data["pump_active"]:
                 data["moisture"] += round(random.uniform(5.0, 10.0), 1)
-                if data["moisture"] > 90: data["moisture"] = 90.0
+                if data["moisture"] > 100: data["moisture"] = 100.0
             else:
                 data["moisture"] -= round(random.uniform(0.5, 2.0), 1)
                 if data["moisture"] < 10: data["moisture"] = 10.0

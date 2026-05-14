@@ -125,7 +125,7 @@ class SmartIrrigation:
                         print(f"[{device_id}] Action: SKIP (Rain expected)")
 
             #Turning off
-            elif current_moisture > target_moisture:
+            elif current_moisture >= target_moisture:
                 if self.pumps_status[device_id]:
                     print(f"[{device_id}] Humidity restored. Action: STOP.")
                     command_payload = [{
