@@ -30,7 +30,7 @@ BROKER_PORT = int(os.getenv("BROKER_PORT", 1883))
 
 MINUTES_PER_PUMP = 5
 LITERS_PER_MINUTE = 2
-MINUTES_FIXED_TIMER_DAY = 15
+MINUTES_FIXED_TIMER_DAY = 120
 PRICE_PER_LITER = 0.004 
 
 # ==================== MQTT CLIENT ====================
@@ -162,7 +162,7 @@ def publish_to_mqtt(statistics: dict):
 @app.route('/api/water-saved', methods=['GET'])
 def get_water_saved():
     """Main endpoint - Returns the water savings."""
-    period = request.args.get('period', '7d')
+    period = request.args.get('period', '15m')
     
     logger.info(f"📈 Dashboard request: calculating savings for {period}")
     
@@ -185,7 +185,7 @@ def get_water_saved():
 @app.route('/api/pump-history', methods=['GET'])
 def get_pump_history_endpoint():
     """Endpoint to retrieve the raw pump history."""
-    period = request.args.get('period', '7d')
+    period = request.args.get('period', '15m')
     
     try:
         history = get_pump_history(period)
@@ -207,7 +207,7 @@ def get_pump_history_endpoint():
 @app.route('/api/statistics', methods=['GET'])
 def get_statistics():
     """Endpoint to retrieve only the calculated statistics."""
-    period = request.args.get('period', '7d')
+    period = request.args.get('period', '15m')
     
     try:
         pump_history = get_pump_history(period)

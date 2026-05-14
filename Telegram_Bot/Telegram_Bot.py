@@ -207,7 +207,7 @@ def handle_status(message):
 
         # 3. Fetch water savings from Statistics Service
         try:
-            stats_res = requests.get(f"{STATISTICS_URL}/api/statistics?period=7d", timeout=5).json()
+            stats_res = requests.get(f"{STATISTICS_URL}/api/statistics?period=15m", timeout=5).json()
             stats = stats_res.get("statistics", {})
             message_text += "💾 *Water Savings (last 7 days)*\n"
             message_text += f"  💧 Litres saved: `{stats.get('liters_saved', 'N/A')} L`\n"

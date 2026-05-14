@@ -4,7 +4,7 @@
         "broker_name": "message-broker",
         "port": 1883
     },
-    "waterPricePerM3": 2.5,
+    "waterPricePerM3": 0.004,
     "garden_grid": {
         "max_pumps": 3,
         "max_taps": 3

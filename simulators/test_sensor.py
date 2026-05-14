@@ -91,13 +91,15 @@ class MultiSensorSim:
                 if data["moisture"] < 10: data["moisture"] = 10.0
 
             temp = round(random.uniform(20.0, 25.0), 2)
+            air_hum = round(random.uniform(40.0, 50.0), 1)
             packet = [
                 {"bn": f"{d_id}/", "n": "temperature", "v": temp, "u": "Cel", "t": timestamp},
+                {"n": "air_humidity", "v": air_hum, "u": "%RH", "t": timestamp},
                 {"n": "soil_moisture", "v": round(data["moisture"], 1), "u": "%RH", "t": timestamp}
             ]
 
             self.client.myPublish(data["topic_pub"], packet)
-            print(f"[SIM] {d_id} | Humidity: {round(data['moisture'], 1)}% | Pump: {'ON' if data['pump_active'] else 'OFF'}")
+            print(f"[SIM] {d_id} | Soil Moisture: {round(data['moisture'], 1)}% | Pump: {'ON' if data['pump_active'] else 'OFF'}")
 
 if __name__ == "__main__":
     # URL of the catalog (localhost because the script runs outside Docker)
