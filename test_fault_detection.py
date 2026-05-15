@@ -149,13 +149,8 @@ def test_fault_detection(client):
 
 # ============ MAIN ============
 if __name__ == "__main__":
-    # Create MQTT client - Compatible with both paho-mqtt versions
-    try:
-        # Try with the new API (version > 1.6)
-        global_client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1, client_id="TestClient")
-    except AttributeError:
-        # If it fails, use the old API
-        global_client = mqtt.Client(client_id="TestClient")
+    # Create MQTT client
+    global_client = mqtt.Client(client_id="TestClient")
     
     global_client.on_connect = on_connect
     global_client.on_message = on_message

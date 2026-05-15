@@ -31,7 +31,6 @@ def on_connect(client, userdata, flags, rc):
         # The bot subscribes to alarms and pump topics
         client.subscribe("garden/alerts/faults")
         client.subscribe("garden/+/pump")
-        client.subscribe("garden/statistics/water-saved")
     else:
         print(f"[MQTT] Connection error: {rc}")
 

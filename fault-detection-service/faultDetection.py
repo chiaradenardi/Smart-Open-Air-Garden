@@ -49,7 +49,15 @@ class FaultDetection:
             print(f"[ERR] Parsing error on topic {topic}: {e}")
 
     def _process_pump(self, dev_id, msg):
-        status = msg.get("pump_status")
+        status = None
+        if isinstance(msg, list):
+            for entry in msg:
+                if entry.get("n") == "pump_status":
+                    status = entry.get("v")
+                    break
+        elif isinstance(msg, dict):
+            status = msg.get("pump_status")
+            
         if status is None: return
         
         on = int(status) == 1
@@ -67,7 +75,15 @@ class FaultDetection:
             print(f"[{dev_id}] Pump stopped. Monitor off.")
 
     def _process_data(self, dev_id, msg):
-        moist = msg.get("soil_moisture")
+        moist = None
+        if isinstance(msg, list):
+            for entry in msg:
+                if entry.get("n") == "soil_moisture":
+                    moist = entry.get("v")
+                    break
+        elif isinstance(msg, dict):
+            moist = msg.get("soil_moisture")
+            
         if moist is None: return
         
         dev = self.devices[dev_id]
