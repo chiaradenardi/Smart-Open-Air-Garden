@@ -49,15 +49,24 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     #toggle pump (on/off) based on message content
     global pump_state
-    payload = msg.payload.decode('utf-8')
-    print(f"\n[MQTT Received] Topic: {msg.topic} | Action: {payload}")
+    payload_str = msg.payload.decode('utf-8')
+    print(f"\n[MQTT Received] Topic: {msg.topic} | Action: {payload_str}")
     
-    if "ON" in payload.upper():
-        pump_state = "ON"
-        print(">>> SYSTEM UPDATE: Pump activated")
-    elif "OFF" in payload.upper():
-        pump_state = "OFF"
-        print(">>> SYSTEM UPDATE: Pump deactivated")
+    try:
+        data = json.loads(payload_str)
+        # Handle SenML format
+        if isinstance(data, list):
+            for entry in data:
+                if entry.get("n") == "pump_status":
+                    if entry.get("v") == 1:
+                        pump_state = "ON"
+                        print(">>> SYSTEM UPDATE: Pump activated")
+                    elif entry.get("v") == 0:
+                        pump_state = "OFF"
+                        print(">>> SYSTEM UPDATE: Pump deactivated")
+                    break
+    except Exception as e:
+        print(f"[ERROR] Failed to parse payload: {e}")
 
 
 if __name__ == "__main__":

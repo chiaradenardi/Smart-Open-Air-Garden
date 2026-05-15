@@ -103,7 +103,6 @@ def calculate_water_savings(pump_history: list) -> dict:
     liters_saved = liters_fixed - liters_used_smart
     savings_percentage = round((liters_saved / liters_fixed) * 100, 1) if liters_fixed > 0 else 0
     
-    # 💶 Calcolo risparmio economico
     euros_saved = round(liters_saved * PRICE_PER_LITER, 2)
     
     return {
