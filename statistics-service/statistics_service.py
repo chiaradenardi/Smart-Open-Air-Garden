@@ -27,11 +27,25 @@ app = Flask(__name__)
 INFLUX_ADAPTOR_URL = os.getenv("INFLUX_ADAPTOR_URL", "http://influx-adaptor:8081")
 BROKER_IP = os.getenv("BROKER_IP", "message-broker")
 BROKER_PORT = int(os.getenv("BROKER_PORT", 1883))
+CATALOG_URL = os.getenv("CATALOG_URL", "http://service-catalog:8080")
 
 MINUTES_PER_PUMP = 5
 LITERS_PER_MINUTE = 2
 MINUTES_FIXED_TIMER_DAY = 120
-PRICE_PER_LITER = 0.004 
+DEFAULT_PRICE_PER_LITER = 0.004  # fallback if catalog is unreachable
+
+def get_price_per_liter() -> float:
+    """Fetches the current water price from the Service Catalog (€/m³) and converts to €/liter."""
+    try:
+        response = requests.get(f"{CATALOG_URL}/price", timeout=3)
+        response.raise_for_status()
+        price_per_m3 = response.json()  # catalog returns a float: €/m³
+        price_per_liter = price_per_m3 / 1000.0
+        logger.info(f"💧 Water price fetched from Catalog: {price_per_m3} €/m³ → {price_per_liter} €/L")
+        return price_per_liter
+    except Exception as e:
+        logger.warning(f"⚠️ Could not fetch price from Catalog: {e}. Using default: {DEFAULT_PRICE_PER_LITER} €/L")
+        return DEFAULT_PRICE_PER_LITER
 
 # ==================== MQTT CLIENT ====================
 mqtt_client = mqtt.Client("statistics-service")
@@ -103,7 +117,9 @@ def calculate_water_savings(pump_history: list) -> dict:
     liters_saved = liters_fixed - liters_used_smart
     savings_percentage = round((liters_saved / liters_fixed) * 100, 1) if liters_fixed > 0 else 0
     
-    euros_saved = round(liters_saved * PRICE_PER_LITER, 2)
+    # Fetch live price from Service Catalog so changes via Telegram Bot are reflected
+    price_per_liter = get_price_per_liter()
+    euros_saved = round(liters_saved * price_per_liter, 2)
     
     return {
         "pump_activations_smart": pump_activations_smart,
@@ -114,7 +130,7 @@ def calculate_water_savings(pump_history: list) -> dict:
         "liters_saved": liters_saved,
         "savings_percentage": savings_percentage,
         "euros_saved": euros_saved,
-        "cost_per_liter": PRICE_PER_LITER
+        "cost_per_liter": price_per_liter
     }
 
 

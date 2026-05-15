@@ -86,9 +86,11 @@ services:
       - "8082:8082"
     environment:
       - INFLUX_ADAPTOR_URL=http://influx-adaptor:8081
+      - CATALOG_URL=http://service-catalog:8080
     depends_on:
       - influx-adaptor
       - influxdb
+      - service-catalog
     restart: always
 
   telegram_bot:
@@ -124,6 +126,7 @@ services:
     environment:
       - CATALOG_URL=http://service-catalog:8080/broker
       - DEVICE_ID=RPi_001
+      - PYTHONUNBUFFERED=1
     depends_on:
       - message-broker
       - service-catalog
@@ -136,6 +139,7 @@ services:
     environment:
       - CATALOG_URL=http://service-catalog:8080/broker
       - DEVICE_ID=RPi_002
+      - PYTHONUNBUFFERED=1
     depends_on:
       - message-broker
       - service-catalog
@@ -148,6 +152,7 @@ services:
     environment:
       - CATALOG_URL=http://service-catalog:8080/broker
       - DEVICE_ID=RPi_003
+      - PYTHONUNBUFFERED=1
     depends_on:
       - message-broker
       - service-catalog
