@@ -21,155 +21,195 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
+
+class MQTTConnection:
+    """Manages MQTT connection and callbacks."""
+    
+    def __init__(self, broker_ip, broker_port):
+        """Initialize MQTT connection."""
+        self.broker_ip = broker_ip
+        self.broker_port = broker_port
+        self.client = mqtt.Client("statistics-service")
+        self.client.on_connect = self._on_connect
+        self.client.on_disconnect = self._on_disconnect
+    
+    def _on_connect(self, client, userdata, flags, rc):
+        """Handle MQTT connection."""
+        if rc == 0:
+            logger.info("✅ Connected to MQTT Broker")
+        else:
+            logger.error(f"❌ MQTT Error: {rc}")
+    
+    def _on_disconnect(self, client, userdata, rc):
+        """Handle MQTT disconnection."""
+        if rc != 0:
+            logger.warning(f"⚠️ Unexpected MQTT disconnection: {rc}")
+    
+    def connect(self):
+        """Connect to broker in background."""
+        try:
+            self.client.connect(self.broker_ip, self.broker_port, keepalive=60)
+            self.client.loop_start()
+            logger.info(f"📡 MQTT: connection to {self.broker_ip}:{self.broker_port}")
+        except Exception as e:
+            logger.warning(f"⚠️ MQTT not available: {e}")
+    
+    def publish(self, topic, message, qos=1):
+        """Publish message to MQTT topic."""
+        try:
+            self.client.publish(topic, message, qos=qos)
+        except Exception as e:
+            logger.warning(f"⚠️ Error publishing on MQTT: {e}")
+    
+    def is_connected(self):
+        """Check if MQTT client is connected."""
+        return self.client.is_connected()
+
+
+class StatisticsService:
+    """Service for calculating and reporting water savings statistics."""
+    
+    # Constants
+    MINUTES_PER_PUMP = 5
+    LITERS_PER_MINUTE = 2
+    MINUTES_FIXED_TIMER_DAY = 120
+    DEFAULT_PRICE_PER_LITER = 0.004
+    
+    def __init__(self, influx_url, broker_ip, broker_port, catalog_url):
+        """Initialize the statistics service."""
+        self.influx_url = influx_url
+        self.catalog_url = catalog_url
+        self.mqtt = MQTTConnection(broker_ip, broker_port)
+        self.mqtt.connect()
+    
+    def get_price_per_liter(self) -> float:
+        """Fetch the current water price from the Service Catalog."""
+        try:
+            response = requests.get(f"{self.catalog_url}/price", timeout=3)
+            response.raise_for_status()
+            price_per_m3 = response.json()
+            price_per_liter = price_per_m3 / 1000.0
+            logger.info(f"💧 Water price fetched from Catalog: {price_per_m3} €/m³ → {price_per_liter} €/L")
+            return price_per_liter
+        except Exception as e:
+            logger.warning(f"⚠️ Could not fetch price from Catalog: {e}. Using default: {self.DEFAULT_PRICE_PER_LITER} €/L")
+            return self.DEFAULT_PRICE_PER_LITER
+    
+    def get_pump_history(self, period: str = "7d") -> list:
+        """Retrieve pump history from InfluxDB Adaptor via REST."""
+        try:
+            logger.info(f"📊 Retrieving pump history for period: {period}")
+            
+            url = f"{self.influx_url}/history"
+            params = {
+                "sensor_type": "pump_status",
+                "period": period
+            }
+            
+            response = requests.get(url, params=params, timeout=5)
+            response.raise_for_status()
+            
+            data = response.json()
+            logger.info(f"✅ Data received: {len(data)} records")
+            return data
+            
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"⚠️ InfluxDB Adaptor not available: {e}")
+            logger.warning("📌 Using test data (fallback)")
+            
+            return [
+                {"time": (datetime.now() - timedelta(days=i)).isoformat(),
+                 "value": 1, "device": "RPi_001", "sensor": "pump_status"}
+                for i in range(5)
+            ]
+    
+    def calculate_water_savings(self, pump_history: list) -> dict:
+        """Calculate water savings and economic savings."""
+        pump_activations_smart = sum(1 for dato in pump_history if dato.get("value") == 1)
+        
+        minutes_used_smart = pump_activations_smart * self.MINUTES_PER_PUMP
+        liters_used_smart = minutes_used_smart * self.LITERS_PER_MINUTE
+        
+        days = 7
+        minutes_fixed_timer_total = self.MINUTES_FIXED_TIMER_DAY * days
+        liters_fixed = minutes_fixed_timer_total * self.LITERS_PER_MINUTE
+        
+        liters_saved = liters_fixed - liters_used_smart
+        savings_percentage = round((liters_saved / liters_fixed) * 100, 1) if liters_fixed > 0 else 0
+        
+        price_per_liter = self.get_price_per_liter()
+        euros_saved = round(liters_saved * price_per_liter, 2)
+        
+        return {
+            "pump_activations_smart": pump_activations_smart,
+            "minutes_used_smart": minutes_used_smart,
+            "liters_used_smart": liters_used_smart,
+            "minutes_fixed_timer": minutes_fixed_timer_total,
+            "liters_fixed_timer": liters_fixed,
+            "liters_saved": liters_saved,
+            "savings_percentage": savings_percentage,
+            "euros_saved": euros_saved,
+            "cost_per_liter": price_per_liter
+        }
+    
+    def build_full_report(self, period: str = "7d") -> dict:
+        """Build the complete report."""
+        pump_history = self.get_pump_history(period)
+        statistics = self.calculate_water_savings(pump_history)
+        
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "period": period,
+            "status": "success",
+            "statistics": statistics,
+            "history_records": len(pump_history),
+            "raw_data": pump_history[:10]
+        }
+    
+    def publish_statistics(self, statistics: dict):
+        """Publish statistics to MQTT for the Telegram Bot."""
+        try:
+            message = {
+                "type": "water_statistics",
+                "timestamp": datetime.now().isoformat(),
+                "liters_saved": statistics["liters_saved"],
+                "savings_percentage": statistics["savings_percentage"],
+                "pump_activations": statistics["pump_activations_smart"]
+            }
+            
+            self.mqtt.publish(
+                "garden/statistics/water-saved",
+                json.dumps(message),
+                qos=1
+            )
+            
+            logger.info(f"📤 Statistics published on MQTT: {statistics['liters_saved']}L saved")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Error publishing on MQTT: {e}")
+    
+    def get_mqtt_status(self) -> bool:
+        """Get MQTT connection status."""
+        return self.mqtt.is_connected()
+
+
+# ==================== FLASK APP SETUP ====================
+
 app = Flask(__name__)
 
-# ==================== CONFIGURATION ====================
+# Configuration
 INFLUX_ADAPTOR_URL = os.getenv("INFLUX_ADAPTOR_URL", "http://influx-adaptor:8081")
 BROKER_IP = os.getenv("BROKER_IP", "message-broker")
 BROKER_PORT = int(os.getenv("BROKER_PORT", 1883))
 CATALOG_URL = os.getenv("CATALOG_URL", "http://service-catalog:8080")
 
-MINUTES_PER_PUMP = 5
-LITERS_PER_MINUTE = 2
-MINUTES_FIXED_TIMER_DAY = 120
-DEFAULT_PRICE_PER_LITER = 0.004  # fallback if catalog is unreachable
-
-def get_price_per_liter() -> float:
-    """Fetches the current water price from the Service Catalog (€/m³) and converts to €/liter."""
-    try:
-        response = requests.get(f"{CATALOG_URL}/price", timeout=3)
-        response.raise_for_status()
-        price_per_m3 = response.json()  # catalog returns a float: €/m³
-        price_per_liter = price_per_m3 / 1000.0
-        logger.info(f"💧 Water price fetched from Catalog: {price_per_m3} €/m³ → {price_per_liter} €/L")
-        return price_per_liter
-    except Exception as e:
-        logger.warning(f"⚠️ Could not fetch price from Catalog: {e}. Using default: {DEFAULT_PRICE_PER_LITER} €/L")
-        return DEFAULT_PRICE_PER_LITER
-
-# ==================== MQTT CLIENT ====================
-mqtt_client = mqtt.Client("statistics-service")
-
-def on_mqtt_connect(client, userdata, flags, rc):
-    if rc == 0:
-        logger.info("✅ Connected to MQTT Broker")
-    else:
-        logger.error(f"❌ MQTT Error: {rc}")
-
-def on_mqtt_disconnect(client, userdata, rc):
-    if rc != 0:
-        logger.warning(f"⚠️ Unexpected MQTT disconnection: {rc}")
-
-mqtt_client.on_connect = on_mqtt_connect
-mqtt_client.on_disconnect = on_mqtt_disconnect
-
-# Connect to broker in background
-def connect_mqtt():
-    try:
-        mqtt_client.connect(BROKER_IP, BROKER_PORT, keepalive=60)
-        mqtt_client.loop_start()
-        logger.info(f"📡 MQTT: connection to {BROKER_IP}:{BROKER_PORT}")
-    except Exception as e:
-        logger.warning(f"⚠️ MQTT not available: {e}")
-
-# ==================== UTILITY FUNCTIONS ====================
-
-def get_pump_history(period: str = "7d") -> list:
-    """Retrieving pump history from InfluxDB Adaptor via REST."""
-    try:
-        logger.info(f"📊 Retrieving pump history for period: {period}")
-        
-        url = f"{INFLUX_ADAPTOR_URL}/history"
-        params = {
-            "sensor_type": "pump_status",
-            "period": period
-        }
-        
-        response = requests.get(url, params=params, timeout=5)
-        response.raise_for_status()
-        
-        dati = response.json()
-        logger.info(f"✅ Data received: {len(dati)} records")
-        return dati
-        
-    except requests.exceptions.RequestException as e:
-        logger.warning(f"⚠️ InfluxDB Adaptor not available: {e}")
-        logger.warning("📌 Using test data (fallback)")
-        
-        return [
-            {"time": (datetime.now() - timedelta(days=i)).isoformat(), 
-             "value": 1, "device": "RPi_001", "sensor": "pump_status"}
-            for i in range(5)
-        ]
-
-
-def calculate_water_savings(pump_history: list) -> dict:
-    """Calculates water savings and economic savings."""
-    pump_activations_smart = sum(1 for dato in pump_history if dato.get("value") == 1)
-    
-    minutes_used_smart = pump_activations_smart * MINUTES_PER_PUMP
-    liters_used_smart = minutes_used_smart * LITERS_PER_MINUTE
-    
-    days = 7
-    minutes_fixed_timer_total = MINUTES_FIXED_TIMER_DAY * days
-    liters_fixed = minutes_fixed_timer_total * LITERS_PER_MINUTE
-    
-    liters_saved = liters_fixed - liters_used_smart
-    savings_percentage = round((liters_saved / liters_fixed) * 100, 1) if liters_fixed > 0 else 0
-    
-    # Fetch live price from Service Catalog so changes via Telegram Bot are reflected
-    price_per_liter = get_price_per_liter()
-    euros_saved = round(liters_saved * price_per_liter, 2)
-    
-    return {
-        "pump_activations_smart": pump_activations_smart,
-        "minutes_used_smart": minutes_used_smart,
-        "liters_used_smart": liters_used_smart,
-        "minutes_fixed_timer": minutes_fixed_timer_total,
-        "liters_fixed_timer": liters_fixed,
-        "liters_saved": liters_saved,
-        "savings_percentage": savings_percentage,
-        "euros_saved": euros_saved,
-        "cost_per_liter": price_per_liter
-    }
-
-
-def build_full_report(period: str = "7d") -> dict:
-    """Building the complete report."""
-    pump_history = get_pump_history(period)
-    statistics = calculate_water_savings(pump_history)
-    
-    return {
-        "timestamp": datetime.now().isoformat(),
-        "period": period,
-        "status": "success",
-        "statistics": statistics,
-        "history_records": len(pump_history),
-        "raw_data": pump_history[:10]
-    }
-
-
-def publish_to_mqtt(statistics: dict):
-    """Publishes statistics to MQTT for the Telegram Bot."""
-    try:
-        message = {
-            "type": "water_statistics",
-            "timestamp": datetime.now().isoformat(),
-            "liters_saved": statistics["liters_saved"],
-            "savings_percentage": statistics["savings_percentage"],
-            "pump_activations": statistics["pump_activations_smart"]
-        }
-        
-        mqtt_client.publish(
-            "garden/statistics/water-saved",
-            json.dumps(message),
-            qos=1
-        )
-        
-        logger.info(f"📤 Statistics published on MQTT: {statistics['liters_saved']}L saved")
-        
-    except Exception as e:
-        logger.warning(f"⚠️ Error publishing on MQTT: {e}")
+# Initialize service
+statistics_service = StatisticsService(
+    INFLUX_ADAPTOR_URL,
+    BROKER_IP,
+    BROKER_PORT,
+    CATALOG_URL
+)
 
 
 # ==================== API REST ENDPOINTS ====================
@@ -182,10 +222,10 @@ def get_water_saved():
     logger.info(f"📈 Dashboard request: calculating savings for {period}")
     
     try:
-        report = build_full_report(period)
+        report = statistics_service.build_full_report(period)
         
-        # Publish to MQTT for Telegram  
-        publish_to_mqtt(report["statistics"])
+        # Publish to MQTT for Telegram
+        statistics_service.publish_statistics(report["statistics"])
         
         return jsonify(report), 200
     
@@ -203,7 +243,7 @@ def get_pump_history_endpoint():
     period = request.args.get('period', '15m')
     
     try:
-        history = get_pump_history(period)
+        history = statistics_service.get_pump_history(period)
         return jsonify({
             "status": "success",
             "period": period,
@@ -225,11 +265,11 @@ def get_statistics():
     period = request.args.get('period', '15m')
     
     try:
-        pump_history = get_pump_history(period)
-        statistics = calculate_water_savings(pump_history)
+        pump_history = statistics_service.get_pump_history(period)
+        statistics = statistics_service.calculate_water_savings(pump_history)
         
-        # Publish to MQTT for Telegram  
-        publish_to_mqtt(statistics)
+        # Publish to MQTT for Telegram
+        statistics_service.publish_statistics(statistics)
         
         return jsonify({
             "status": "success",
@@ -253,7 +293,7 @@ def health_check():
         "service": "statistics-service",
         "status": "running",
         "timestamp": datetime.now().isoformat(),
-        "mqtt_connected": mqtt_client.is_connected()
+        "mqtt_connected": statistics_service.get_mqtt_status()
     }), 200
 
 
@@ -262,9 +302,6 @@ def health_check():
 if __name__ == '__main__':
     logger.info("🚀 Statistics Service started")
     logger.info(f"📡 InfluxDB Adaptor: {INFLUX_ADAPTOR_URL}")
-    
-    # Connect to MQTT
-    connect_mqtt()
     
     # Start Flask
     app.run(host='0.0.0.0', port=8082, debug=False)
