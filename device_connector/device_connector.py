@@ -4,17 +4,19 @@ import random
 import json
 import os
 import paho.mqtt.client as mqtt
+import threading
 
 
-class DeviceConnector:
+class DeviceConnector(threading.Thread):
     """This class represents the Raspberry Pi in a garden. 
     It simulates sensor data and listens for pump commands."""
 
-    def __init__(self):
+    def __init__(self, catalog_url, garden_id, device_id):
         """Creates the device object and sets default values for sensors and pump."""
-        self.catalog_url = os.getenv("CATALOG_URL", "http://service-catalog:8080")
-        self.garden_id   = os.getenv("GARDEN_ID",   "G_001")
-        self.device_id   = os.getenv("DEVICE_ID",   "RPi_001")
+        super().__init__()
+        self.catalog_url = catalog_url
+        self.garden_id   = garden_id
+        self.device_id   = device_id
 
         # slot_id → pump state ("ON"/"OFF")
         self.pump_states = {}
@@ -27,20 +29,17 @@ class DeviceConnector:
         self.broker_port = 1883
         self.client_id   = f"Client_{self.device_id}"
         self.client      = None
+        self.stop_event  = threading.Event()
 
     # ── Catalog interactions ──────────────────────────────────────────────────
 
     def get_broker_config(self):
         """Asks the catalog where the MQTT broker is located."""
-        print("[INIT] Requesting broker config from Catalog")
         try:
-            r = requests.get(f"{self.catalog_url}/broker", timeout=10)
+            r = requests.get(f"{self.catalog_url}/broker", timeout=5)
             r.raise_for_status()
-            cfg = r.json()
-            print(f"[INIT] Broker config received: {cfg}")
-            return cfg
-        except requests.exceptions.RequestException as e:
-            print(f"[ERROR] Failed to reach Catalog: {e}")
+            return r.json()
+        except Exception:
             return None
 
     def get_garden_slots(self):
@@ -48,14 +47,11 @@ class DeviceConnector:
         try:
             r = requests.get(
                 f"{self.catalog_url}/gardens/{self.garden_id}/slots",
-                timeout=10
+                timeout=5
             )
             r.raise_for_status()
-            slots = r.json()
-            print(f"[INIT] Garden {self.garden_id}: {len(slots)} slot(s) found")
-            return slots
-        except Exception as e:
-            print(f"[ERROR] Cannot fetch slots for garden {self.garden_id}: {e}")
+            return r.json()
+        except Exception:
             return []
 
     # ── Sensor simulation ─────────────────────────────────────────────────────
@@ -79,13 +75,13 @@ class DeviceConnector:
     def _on_connect(self, client, userdata, flags, rc):
         """When connected to MQTT, it subscribes to the pump topics for all slots."""
         if rc == 0:
-            print("[MQTT] Connection established with broker")
+            print(f"[MQTT - {self.device_id}] Connection established with broker")
             for slot in self.slots:
                 topic = f"garden/{self.garden_id}/{slot['slotID']}/pump"
                 client.subscribe(topic)
-                print(f"[MQTT] Subscribed to: {topic}")
+                print(f"[MQTT - {self.device_id}] Subscribed to: {topic}")
         else:
-            print(f"[MQTT] Connection failed with error code: {rc}")
+            print(f"[MQTT - {self.device_id}] Connection failed with error code: {rc}")
 
     def _on_message(self, client, userdata, msg):
         """Reads incoming MQTT messages and turns the simulated pump ON or OFF."""
@@ -95,7 +91,7 @@ class DeviceConnector:
             return
         slot_id = parts[2]
 
-        print(f"\n[MQTT Received] Topic: {msg.topic} | Payload: {payload_str}")
+        print(f"\n[MQTT Received - {self.device_id}] Topic: {msg.topic} | Payload: {payload_str}")
         try:
             data = json.loads(payload_str)
             if isinstance(data, list):
@@ -103,13 +99,13 @@ class DeviceConnector:
                     if entry.get("n") == "pump_status":
                         if entry.get("v") == 1:
                             self.pump_states[slot_id] = "ON"
-                            print(f">>> [{slot_id}] Pump activated")
+                            print(f">>> [{self.garden_id}/{slot_id}] Pump activated")
                         elif entry.get("v") == 0:
                             self.pump_states[slot_id] = "OFF"
-                            print(f">>> [{slot_id}] Pump deactivated")
+                            print(f">>> [{self.garden_id}/{slot_id}] Pump deactivated")
                         break
         except Exception as e:
-            print(f"[ERROR] Failed to parse payload: {e}")
+            print(f"[ERROR - {self.device_id}] Failed to parse payload: {e}")
 
     def setup_mqtt(self):
         """Prepares the MQTT client with ID and callbacks."""
@@ -119,13 +115,11 @@ class DeviceConnector:
 
     def connect_mqtt(self):
         """Tries to connect to the broker, and keeps retrying if it fails."""
-        print(f"[SETUP] Connecting to broker at {self.broker_ip} as {self.client_id}")
-        while True:
+        while not self.stop_event.is_set():
             try:
                 self.client.connect(self.broker_ip, self.broker_port, 60)
                 break
-            except Exception as e:
-                print(f"[ERROR] MQTT connection failed, retrying... ({e})")
+            except Exception:
                 time.sleep(5)
 
     # ── Telemetry publishing ──────────────────────────────────────────────────
@@ -133,6 +127,29 @@ class DeviceConnector:
     def publish_telemetry(self):
         """Sends the generated sensor data to MQTT using SenML format."""
         ts = int(time.time())
+        # Periodically refresh slots list from catalog in case new slots were added/removed
+        current_slots = self.get_garden_slots()
+        if current_slots:
+            # Add state for newly added slots
+            for s in current_slots:
+                sid = s["slotID"]
+                if sid not in self.pump_states:
+                    self.pump_states[sid] = "OFF"
+                    self.slot_moisture[sid] = 60.0
+            
+            # Update subscriptions if active slots count changed
+            active_sids = {s["slotID"] for s in current_slots}
+            old_sids = {s["slotID"] for s in self.slots}
+            if active_sids != old_sids and self.client and self.client.is_connected():
+                # Unsubscribe from removed slots
+                for sid in old_sids - active_sids:
+                    self.client.unsubscribe(f"garden/{self.garden_id}/{sid}/pump")
+                # Subscribe to new slots
+                for sid in active_sids - old_sids:
+                    self.client.subscribe(f"garden/{self.garden_id}/{sid}/pump")
+            
+            self.slots = current_slots
+
         for slot in self.slots:
             s_id = slot["slotID"]
             temp, air_hum, moisture = self.simulate_sensors(s_id)
@@ -148,21 +165,25 @@ class DeviceConnector:
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
-    def start(self):
-        """Main function: gets config, connects to MQTT, and loops to send data every 5 seconds."""
+    def run(self):
+        """Main thread function: gets config, connects to MQTT, and loops to send data every 5 seconds."""
         # 1. Wait for broker config
         broker_cfg = None
-        while not broker_cfg:
+        while not broker_cfg and not self.stop_event.is_set():
             broker_cfg = self.get_broker_config()
             if not broker_cfg:
                 time.sleep(5)
+        if self.stop_event.is_set():
+            return
         self.broker_ip = broker_cfg.get("broker_name", "message-broker")
 
         # 2. Wait for garden slots
-        while not self.slots:
+        while not self.slots and not self.stop_event.is_set():
             self.slots = self.get_garden_slots()
             if not self.slots:
                 time.sleep(5)
+        if self.stop_event.is_set():
+            return
 
         # Init per-slot state
         for s in self.slots:
@@ -172,26 +193,100 @@ class DeviceConnector:
         # 3. Setup and connect MQTT
         self.setup_mqtt()
         self.connect_mqtt()
+        if self.stop_event.is_set():
+            return
         self.client.loop_start()
-        print(f"\n[INIT] Telemetry loop started for garden {self.garden_id} "
-              f"with {len(self.slots)} slot(s). Press Ctrl+C to stop.")
+        print(f"\n[INIT - {self.device_id}] Telemetry loop started for garden {self.garden_id} with {len(self.slots)} slot(s).")
 
         # 4. Telemetry loop
         try:
-            while True:
+            while not self.stop_event.is_set():
                 self.publish_telemetry()
-                time.sleep(5)
-        except KeyboardInterrupt:
-            print("\n[STOP] Connector terminated by user. Disconnecting.")
+                # sleep in small increments to respond quickly to stop events
+                for _ in range(50):
+                    if self.stop_event.is_set():
+                        break
+                    time.sleep(0.1)
+        finally:
+            print(f"\n[STOP - {self.device_id}] Connector terminated. Disconnecting.")
             self.stop()
 
     def stop(self):
         """Safely stops the MQTT loop and disconnects."""
+        self.stop_event.set()
         if self.client:
-            self.client.loop_stop()
-            self.client.disconnect()
+            try:
+                self.client.loop_stop()
+                self.client.disconnect()
+            except Exception:
+                pass
+
+
+class DeviceConnectorManager:
+    """Manages dynamic discovery and simulation of registered devices in all gardens."""
+
+    def __init__(self):
+        self.catalog_url = os.getenv("CATALOG_URL", "http://service-catalog:8080")
+        self.active_connectors = {}  # garden_id -> DeviceConnector instance
+
+    def fetch_gardens(self):
+        try:
+            r = requests.get(f"{self.catalog_url}/gardens", timeout=5)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            print(f"[MANAGER] Catalog unreachable: {e}")
+            return []
+
+    def start(self):
+        print("[MANAGER] Starting dynamic Device Connector Manager...")
+        try:
+            while True:
+                gardens = self.fetch_gardens()
+                current_active_gardens = {}
+
+                for g in gardens:
+                    g_id = g.get("gardenID")
+                    device_info = g.get("device", {})
+                    device_id = device_info.get("deviceID")
+                    
+                    if device_id and device_info.get("status") == "active":
+                        current_active_gardens[g_id] = device_id
+
+                # 1. Start connectors for new active garden devices
+                for g_id, d_id in current_active_gardens.items():
+                    if g_id not in self.active_connectors:
+                        print(f"[MANAGER] New active device detected for garden {g_id}: {d_id}. Starting simulator...")
+                        connector = DeviceConnector(self.catalog_url, g_id, d_id)
+                        connector.start()
+                        self.active_connectors[g_id] = connector
+                    elif self.active_connectors[g_id].device_id != d_id:
+                        # Device ID changed for this garden
+                        print(f"[MANAGER] Device changed for garden {g_id}: {self.active_connectors[g_id].device_id} -> {d_id}. Restarting simulator...")
+                        self.active_connectors[g_id].stop()
+                        self.active_connectors[g_id].join()
+                        connector = DeviceConnector(self.catalog_url, g_id, d_id)
+                        connector.start()
+                        self.active_connectors[g_id] = connector
+
+                # 2. Stop connectors for gardens that are no longer active/deleted
+                for g_id in list(self.active_connectors.keys()):
+                    if g_id not in current_active_gardens:
+                        print(f"[MANAGER] Device/garden removed for {g_id}. Stopping simulator...")
+                        self.active_connectors[g_id].stop()
+                        self.active_connectors[g_id].join()
+                        del self.active_connectors[g_id]
+
+                time.sleep(10)
+        except KeyboardInterrupt:
+            print("[MANAGER] Terminating manager. Stopping all simulators...")
+            for connector in self.active_connectors.values():
+                connector.stop()
+            for connector in self.active_connectors.values():
+                connector.join()
+            print("[MANAGER] Done.")
 
 
 if __name__ == "__main__":
-    connector = DeviceConnector()
-    connector.start()
+    manager = DeviceConnectorManager()
+    manager.start()

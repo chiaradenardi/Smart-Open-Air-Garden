@@ -1,5 +1,5 @@
 {
-    "lastUpdateJSON": 1779121082.203435,
+    "lastUpdateJSON": 1779125420.35005,
     "broker": {
         "broker_name": "message-broker",
         "port": 1883
@@ -131,6 +131,46 @@
                 "U_002",
                 "U_003"
             ]
+        },
+        {
+            "gardenID": "G_003",
+            "gardenName": "Rooftop Garden",
+            "location": "",
+            "grid": {
+                "max_pumps": 2,
+                "max_taps": 5
+            },
+            "device": {
+                "deviceID": "RPi_003",
+                "deviceName": "GardenGateway_003",
+                "status": "active",
+                "sensors": [
+                    "SoilMoisture",
+                    "DHT11"
+                ],
+                "actuators": [
+                    "MicroServoPump"
+                ],
+                "config": {
+                    "clientID": "Client_RPi_003"
+                }
+            },
+            "slots": [
+                {
+                    "slotID": "P2_R1",
+                    "slotName": "Zone P2_R1",
+                    "plantID": "P11",
+                    "status": "active",
+                    "sensors": [
+                        "SoilMoisture",
+                        "DHT11"
+                    ],
+                    "actuators": [
+                        "MicroServoPump"
+                    ]
+                }
+            ],
+            "ownerIDs": []
         }
     ],
     "servicesList": [
@@ -259,10 +299,6 @@
             "name": "Basil",
             "min_moisture_threshold": 60.0
         },
-        "P3": {
-            "name": "Lettuce",
-            "min_moisture_threshold": 50.0
-        },
         "P5": {
             "name": "Cabbage",
             "min_moisture_threshold": 30.0
@@ -274,6 +310,14 @@
         "P10": {
             "name": "Strawberry",
             "min_moisture_threshold": 70.0
+        },
+        "P3": {
+            "name": "Lettuce",
+            "min_moisture_threshold": 50.0
+        },
+        "P11": {
+            "name": "Onion",
+            "min_moisture_threshold": 48.0
         }
     }
 }

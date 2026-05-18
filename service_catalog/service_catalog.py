@@ -247,6 +247,11 @@ class GardensEndpoint:
 
         # PUT /gardens/{gID}/device
         if section == "device":
+            device_id = body.get("deviceID")
+            if device_id:
+                for g in data["gardensList"]:
+                    if g["gardenID"] != garden_id and g.get("device", {}).get("deviceID") == device_id:
+                        return json.dumps({"error": f"Device '{device_id}' is already registered in garden '{g['gardenID']}' ({g['gardenName']})"}, indent=4)
             garden["device"] = body
             _save(data)
             return json.dumps({"result": "Device updated"}, indent=4)

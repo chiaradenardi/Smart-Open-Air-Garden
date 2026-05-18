@@ -119,30 +119,13 @@ services:
       - message-broker
     restart: always
 
-  # Garden G_001 — RPi_001 manages slots P1_R1, P1_R2, P3_R3
-  device-connector-g001:
+  # Dynamic Unified Device Connector Simulator (Auto-simulates all active garden devices)
+  device-connector:
     build: ./device_connector
     image: smart-open-air-garden-device-connector
-    container_name: device-connector-g001
+    container_name: device-connector
     environment:
       - CATALOG_URL=http://service-catalog:8080
-      - GARDEN_ID=G_001
-      - DEVICE_ID=RPi_001
-      - PYTHONUNBUFFERED=1
-    depends_on:
-      - message-broker
-      - service-catalog
-    restart: always
-
-  # Garden G_002 — RPi_009 manages slots P3_R1, P5_R5
-  device-connector-g002:
-    build: ./device_connector
-    image: smart-open-air-garden-device-connector
-    container_name: device-connector-g002
-    environment:
-      - CATALOG_URL=http://service-catalog:8080
-      - GARDEN_ID=G_002
-      - DEVICE_ID=RPi_009
       - PYTHONUNBUFFERED=1
     depends_on:
       - message-broker

@@ -237,10 +237,13 @@ def process_create_garden(message):
         if "error" in d:
             bot.send_message(message.chat.id, f"❌ {d['error']}"); return
         chat_garden_map[str(message.chat.id)] = garden_id
-        bot.send_message(message.chat.id,
-            f"✅ Garden *{garden_name}* (`{garden_id}`) created and set as active!\n"
-            f"Now use /adddevice to register the Raspberry Pi for this garden.",
+        msg = bot.send_message(message.chat.id,
+            f"✅ Garden *{garden_name}* (`{garden_id}`) created and set as active!\n\n"
+            "📐 *Set Garden Dimensions*\n"
+            "Please enter the grid dimensions (Rows, Taps):\n"
+            "Example: *3, 4*",
             parse_mode="Markdown")
+        bot.register_next_step_handler(msg, process_set_dimensions)
     except Exception as e:
         err(message, e)
 
@@ -565,8 +568,12 @@ def process_add_device(message, garden_id):
             "sensors": ["SoilMoisture", "DHT11"], "actuators": ["MicroServoPump"],
             "config": {"clientID": f"Client_{device_id}"}
         }
-        requests.put(f"{CATALOG_REST_URL}/gardens/{garden_id}/device",
-                     json=payload, timeout=5).raise_for_status()
+        r = requests.put(f"{CATALOG_REST_URL}/gardens/{garden_id}/device",
+                         json=payload, timeout=5)
+        r.raise_for_status()
+        d = r.json()
+        if "error" in d:
+            bot.send_message(message.chat.id, f"❌ {d['error']}"); return
         bot.send_message(message.chat.id,
                          f"✅ Device `{device_id}` registered for garden `{garden_id}`!",
                          parse_mode="Markdown")
