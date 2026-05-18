@@ -20,6 +20,10 @@ INFLUX_URL        = os.getenv("INFLUX_ADAPTOR_URL","http://influx-adaptor:8081")
 # chat_id (str) → gardenID (str)
 chat_garden_map: dict = {}
 
+# ── Pending resize confirmations (in-RAM, per chat) ───────────────────────────
+# chat_id (str) → {"garden_id": str, "max_pumps": int, "max_taps": int, "to_delete": [str]}
+pending_resize: dict = {}
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -811,20 +815,109 @@ def handle_set_dimensions(message):
 def process_set_dimensions(message):
     if not need_garden(message):
         return
-    g_id, _ = active_garden(message.chat.id)
+    g_id, garden = active_garden(message.chat.id)
     try:
         parts = [int(x.strip()) for x in message.text.split(',')]
         if len(parts) != 2:
             raise ValueError()
-        requests.put(f"{CATALOG_REST_URL}/gardens/{g_id}/grid",
-                     json={"max_pumps": parts[0], "max_taps": parts[1]},
-                     timeout=5).raise_for_status()
-        bot.send_message(message.chat.id,
-            f"✅ Dimensions updated!\n{generate_text_grid(g_id)}", parse_mode="Markdown")
+        new_pumps, new_taps = parts[0], parts[1]
+        if new_pumps <= 0 or new_taps <= 0:
+            raise ValueError()
+
+        # Find slots that fall outside the new grid dimensions
+        slots = garden.get("slots", [])
+        out_of_bounds = []
+        for s in slots:
+            sid = s.get("slotID", "")
+            # Parse Px_Ry format
+            try:
+                p_part, r_part = sid.split("_R")
+                p_num = int(p_part.replace("P", ""))
+                r_num = int(r_part)
+                if p_num > new_pumps or r_num > new_taps:
+                    out_of_bounds.append(sid)
+            except Exception:
+                pass  # skip unparseable slot IDs
+
+        if out_of_bounds:
+            # Store pending resize info and ask for confirmation
+            pending_resize[str(message.chat.id)] = {
+                "garden_id": g_id,
+                "max_pumps": new_pumps,
+                "max_taps": new_taps,
+                "to_delete": out_of_bounds
+            }
+            slot_list = "\n".join(f"  🌱 `{sid}`" for sid in out_of_bounds)
+            markup = telebot.types.InlineKeyboardMarkup()
+            markup.add(
+                telebot.types.InlineKeyboardButton(
+                    "🗑️ Delete slots & confirm", callback_data="resize_confirm"),
+                telebot.types.InlineKeyboardButton(
+                    "❌ Cancel", callback_data="resize_cancel")
+            )
+            bot.send_message(message.chat.id,
+                f"⚠️ *Resizing to {new_pumps}×{new_taps} will remove {len(out_of_bounds)} slot(s)*\n\n"
+                f"The following slots fall outside the new grid and will be deleted:\n{slot_list}\n\n"
+                "Do you want to proceed?",
+                reply_markup=markup, parse_mode="Markdown")
+        else:
+            # No conflict — apply directly
+            requests.put(f"{CATALOG_REST_URL}/gardens/{g_id}/grid",
+                         json={"max_pumps": new_pumps, "max_taps": new_taps},
+                         timeout=5).raise_for_status()
+            bot.send_message(message.chat.id,
+                f"✅ Dimensions updated to *{new_pumps}×{new_taps}*!\n{generate_text_grid(g_id)}",
+                parse_mode="Markdown")
     except ValueError:
-        bot.send_message(message.chat.id, "❌ Invalid format. Use: `3, 4`")
+        bot.send_message(message.chat.id, "❌ Invalid format. Use positive integers: `3, 4`")
     except Exception as e:
         err(message, e)
+
+
+@bot.callback_query_handler(func=lambda c: c.data in ("resize_confirm", "resize_cancel"))
+def handle_resize_confirm(call):
+    bot.answer_callback_query(call.id)
+    chat_id = str(call.message.chat.id)
+    pending = pending_resize.pop(chat_id, None)
+
+    if call.data == "resize_cancel" or pending is None:
+        bot.send_message(call.message.chat.id,
+            "❌ *Resize cancelled.* Garden dimensions unchanged.", parse_mode="Markdown")
+        return
+
+    g_id      = pending["garden_id"]
+    new_pumps = pending["max_pumps"]
+    new_taps  = pending["max_taps"]
+    to_delete = pending["to_delete"]
+
+    try:
+        # Delete out-of-bounds slots one by one
+        failed = []
+        for sid in to_delete:
+            r = requests.delete(
+                f"{CATALOG_REST_URL}/gardens/{g_id}/slots/{sid}", timeout=5)
+            if r.status_code not in (200, 404):
+                failed.append(sid)
+
+        if failed:
+            bot.send_message(call.message.chat.id,
+                f"⚠️ Could not delete slots: {', '.join(f'`{s}`' for s in failed)}. Resize aborted.",
+                parse_mode="Markdown")
+            return
+
+        # Apply new grid dimensions
+        requests.put(f"{CATALOG_REST_URL}/gardens/{g_id}/grid",
+                     json={"max_pumps": new_pumps, "max_taps": new_taps},
+                     timeout=5).raise_for_status()
+
+        deleted_list = ", ".join(f"`{s}`" for s in to_delete)
+        bot.send_message(call.message.chat.id,
+            f"✅ *Resize done!* New size: *{new_pumps}×{new_taps}*\n"
+            f"🗑️ Deleted slots: {deleted_list}\n\n"
+            f"{generate_text_grid(g_id)}",
+            parse_mode="Markdown")
+    except Exception as e:
+        err(call.message, e)
 
 
 # ── Admin panel ───────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 {
-    "lastUpdateJSON": 1771102729.8,
+    "lastUpdateJSON": 1779121082.203435,
     "broker": {
         "broker_name": "message-broker",
         "port": 1883
@@ -12,15 +12,20 @@
             "gardenName": "Main Garden",
             "location": "45.058614,7.6567",
             "grid": {
-                "max_pumps": 8,
-                "max_taps": 8
+                "max_pumps": 1,
+                "max_taps": 1
             },
             "device": {
                 "deviceID": "RPi_001",
                 "deviceName": "GardenGateway_001",
                 "status": "active",
-                "sensors": ["SoilMoisture", "DHT11"],
-                "actuators": ["MicroServoPump"],
+                "sensors": [
+                    "SoilMoisture",
+                    "DHT11"
+                ],
+                "actuators": [
+                    "MicroServoPump"
+                ],
                 "config": {
                     "clientID": "Client_RPi_001"
                 }
@@ -31,27 +36,45 @@
                     "slotName": "Zone P1_R1",
                     "plantID": "P6",
                     "status": "active",
-                    "sensors": ["SoilMoisture", "DHT11"],
-                    "actuators": ["MicroServoPump"]
+                    "sensors": [
+                        "SoilMoisture",
+                        "DHT11"
+                    ],
+                    "actuators": [
+                        "MicroServoPump"
+                    ]
                 },
                 {
                     "slotID": "P1_R2",
                     "slotName": "Zone P1_R2",
                     "plantID": "P3",
                     "status": "active",
-                    "sensors": ["SoilMoisture", "DHT11"],
-                    "actuators": ["MicroServoPump"]
+                    "sensors": [
+                        "SoilMoisture",
+                        "DHT11"
+                    ],
+                    "actuators": [
+                        "MicroServoPump"
+                    ]
                 },
                 {
                     "slotID": "P3_R3",
                     "slotName": "Zone P3_R3",
                     "plantID": "P6",
                     "status": "active",
-                    "sensors": ["SoilMoisture", "DHT11"],
-                    "actuators": ["MicroServoPump"]
+                    "sensors": [
+                        "SoilMoisture",
+                        "DHT11"
+                    ],
+                    "actuators": [
+                        "MicroServoPump"
+                    ]
                 }
             ],
-            "ownerIDs": ["U_001", "U_002"]
+            "ownerIDs": [
+                "U_001",
+                "U_002"
+            ]
         },
         {
             "gardenID": "G_002",
@@ -65,8 +88,13 @@
                 "deviceID": "RPi_009",
                 "deviceName": "GardenGateway_009",
                 "status": "active",
-                "sensors": ["SoilMoisture", "DHT11"],
-                "actuators": ["MicroServoPump"],
+                "sensors": [
+                    "SoilMoisture",
+                    "DHT11"
+                ],
+                "actuators": [
+                    "MicroServoPump"
+                ],
                 "config": {
                     "clientID": "Client_RPi_009"
                 }
@@ -77,19 +105,32 @@
                     "slotName": "Zone P3_R1",
                     "plantID": "P10",
                     "status": "active",
-                    "sensors": ["SoilMoisture", "DHT11"],
-                    "actuators": ["MicroServoPump"]
+                    "sensors": [
+                        "SoilMoisture",
+                        "DHT11"
+                    ],
+                    "actuators": [
+                        "MicroServoPump"
+                    ]
                 },
                 {
                     "slotID": "P5_R5",
                     "slotName": "Zone P5_R5",
                     "plantID": "P10",
                     "status": "active",
-                    "sensors": ["SoilMoisture", "DHT11"],
-                    "actuators": ["MicroServoPump"]
+                    "sensors": [
+                        "SoilMoisture",
+                        "DHT11"
+                    ],
+                    "actuators": [
+                        "MicroServoPump"
+                    ]
                 }
             ],
-            "ownerIDs": ["U_002", "U_003"]
+            "ownerIDs": [
+                "U_002",
+                "U_003"
+            ]
         }
     ],
     "servicesList": [
@@ -98,10 +139,17 @@
             "serviceName": "SmartIrrigationStrategy",
             "status": "active",
             "MQTT": {
-                "topicSub": ["garden/+/+/telemetry"],
-                "topicPub":  ["garden/+/+/pump"]
+                "topicSub": [
+                    "garden/+/+/telemetry"
+                ],
+                "topicPub": [
+                    "garden/+/+/pump"
+                ]
             },
-            "REST": {"serverHost": "127.0.0.1", "serverPort": 8081},
+            "REST": {
+                "serverHost": "127.0.0.1",
+                "serverPort": 8081
+            },
             "lastUpdate": 1771102729.8
         },
         {
@@ -109,18 +157,32 @@
             "serviceName": "FaultDetectionService",
             "status": "active",
             "MQTT": {
-                "topicSub": ["garden/+/+/telemetry", "garden/+/+/pump"],
-                "topicPub":  ["garden/alerts/faults"]
+                "topicSub": [
+                    "garden/+/+/telemetry",
+                    "garden/+/+/pump"
+                ],
+                "topicPub": [
+                    "garden/alerts/faults"
+                ]
             },
-            "REST": {"serverHost": "127.0.0.1", "serverPort": 8082},
+            "REST": {
+                "serverHost": "127.0.0.1",
+                "serverPort": 8082
+            },
             "lastUpdate": 1771102729.8
         },
         {
             "serviceID": "03",
             "serviceName": "StatisticAnalyticsService",
             "status": "active",
-            "MQTT": {"topicSub": [], "topicPub": []},
-            "REST": {"serverHost": "127.0.0.1", "serverPort": 8083},
+            "MQTT": {
+                "topicSub": [],
+                "topicPub": []
+            },
+            "REST": {
+                "serverHost": "127.0.0.1",
+                "serverPort": 8083
+            },
             "lastUpdate": 1771102729.8
         },
         {
@@ -128,18 +190,29 @@
             "serviceName": "InfluxDBAdaptor",
             "status": "active",
             "MQTT": {
-                "topicSub": ["garden/#"],
-                "topicPub":  []
+                "topicSub": [
+                    "garden/#"
+                ],
+                "topicPub": []
             },
-            "REST": {"serverHost": "127.0.0.1", "serverPort": 8084},
+            "REST": {
+                "serverHost": "127.0.0.1",
+                "serverPort": 8084
+            },
             "lastUpdate": 1771102729.8
         },
         {
             "serviceID": "05",
             "serviceName": "WeatherServiceAdaptor",
             "status": "active",
-            "MQTT": {"topicSub": [], "topicPub": []},
-            "REST": {"serverHost": "127.0.0.1", "serverPort": 8085},
+            "MQTT": {
+                "topicSub": [],
+                "topicPub": []
+            },
+            "REST": {
+                "serverHost": "127.0.0.1",
+                "serverPort": 8085
+            },
             "lastUpdate": 1771102729.8
         },
         {
@@ -147,10 +220,16 @@
             "serviceName": "TelegramBot",
             "status": "active",
             "MQTT": {
-                "topicSub": ["garden/alerts/faults", "garden/+/+/pump"],
-                "topicPub":  []
+                "topicSub": [
+                    "garden/alerts/faults",
+                    "garden/+/+/pump"
+                ],
+                "topicPub": []
             },
-            "REST": {"serverHost": "127.0.0.1", "serverPort": 8086},
+            "REST": {
+                "serverHost": "127.0.0.1",
+                "serverPort": 8086
+            },
             "lastUpdate": 1771102729.8
         }
     ],
@@ -172,11 +251,29 @@
         }
     ],
     "irrigation_strategies": {
-        "P1": {"name": "Tomato",      "min_moisture_threshold": 40.0},
-        "P2": {"name": "Basil",       "min_moisture_threshold": 60.0},
-        "P3": {"name": "Lettuce",     "min_moisture_threshold": 50.0},
-        "P5": {"name": "Cabbage",     "min_moisture_threshold": 30.0},
-        "P6": {"name": "Parsley",     "min_moisture_threshold": 45.0},
-        "P10":{"name": "Strawberry",  "min_moisture_threshold": 70.0}
+        "P1": {
+            "name": "Tomato",
+            "min_moisture_threshold": 40.0
+        },
+        "P2": {
+            "name": "Basil",
+            "min_moisture_threshold": 60.0
+        },
+        "P3": {
+            "name": "Lettuce",
+            "min_moisture_threshold": 50.0
+        },
+        "P5": {
+            "name": "Cabbage",
+            "min_moisture_threshold": 30.0
+        },
+        "P6": {
+            "name": "Parsley",
+            "min_moisture_threshold": 45.0
+        },
+        "P10": {
+            "name": "Strawberry",
+            "min_moisture_threshold": 70.0
+        }
     }
 }
