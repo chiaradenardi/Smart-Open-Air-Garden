@@ -13,7 +13,7 @@ This document defines the standardized MQTT message formats and topic naming con
 All MQTT topics follow a consistent hierarchical structure:
 
 ```
-garden/{device_id}/{message_type}
+garden/{garden_id}/{slot_id}/{message_type}
 garden/alerts/{alert_type}
 ```
 
@@ -21,15 +21,15 @@ garden/alerts/{alert_type}
 
 | Topic Pattern | Purpose | Publisher | Subscriber |
 |---|---|---|---|
-| `garden/{device_id}/telemetry` | Device sensor readings | Device Connector | Statistics Service, Influx Adaptor, Smart Irrigation, Fault Detection |
-| `garden/{device_id}/pump` | Pump control commands | Smart Irrigation Service | Device Connector, Fault Detection |
+| `garden/{garden_id}/{slot_id}/telemetry` | Device sensor readings | Device Connector | Statistics Service, Influx Adaptor, Smart Irrigation, Fault Detection |
+| `garden/{garden_id}/{slot_id}/pump` | Pump control commands | Smart Irrigation Service | Device Connector, Fault Detection |
 | `garden/alerts/faults` | Fault detection alerts | Fault Detection Service | Telegram Bot, Statistics Service |
 
 ## Message Formats
 
 ### 1. Telemetry Data (Device Sensors)
 
-**Topic**: `garden/{device_id}/telemetry`  
+**Topic**: `garden/{garden_id}/{slot_id}/telemetry`  
 **Publisher**: Device Connector  
 **Subscribers**: Statistics Service, Influx Adaptor, Smart Irrigation Service, Fault Detection Service
 
@@ -60,7 +60,7 @@ garden/alerts/{alert_type}
 ```
 
 **Field Definitions**:
-- `bn` (Base Name): Optional base identifier for the device. Format: `{device_id}/`
+- `bn` (Base Name): Optional base identifier for the device/slot. Format: `{garden_id}/{slot_id}/`
 - `n` (Name): Sensor/measurement name
   - Valid values: `temperature`, `air_humidity`, `soil_moisture`, `pump_status`
 - `v` (Value): Measurement value (number, integer, boolean, or string)
@@ -79,10 +79,10 @@ garden/alerts/{alert_type}
 
 **Example Message**:
 ```
-Topic: garden/RPi_001/telemetry
+Topic: garden/G_001/P1_R1/telemetry
 Payload:
 [
-  {"bn": "RPi_001/", "n": "temperature", "v": 22.3, "u": "Cel", "t": 1715930532},
+  {"bn": "G_001/P1_R1/", "n": "temperature", "v": 22.3, "u": "Cel", "t": 1715930532},
   {"n": "air_humidity", "v": 48.5, "u": "%RH", "t": 1715930532},
   {"n": "soil_moisture", "v": 62.8, "u": "%", "t": 1715930532}
 ]
@@ -90,7 +90,7 @@ Payload:
 
 ### 2. Pump Control Commands
 
-**Topic**: `garden/{device_id}/pump`  
+**Topic**: `garden/{garden_id}/{slot_id}/pump`  
 **Publisher**: Smart Irrigation Service  
 **Subscribers**: Device Connector, Fault Detection Service
 
@@ -99,7 +99,7 @@ Payload:
 ```json
 [
   {
-    "bn": "RPi_001/",
+    "bn": "G_001/P1_R1/",
     "n": "pump_status",
     "v": 1,
     "u": "on/off",
@@ -126,11 +126,11 @@ Payload:
 
 Pump ON:
 ```
-Topic: garden/RPi_001/pump
+Topic: garden/G_001/P1_R1/pump
 Payload:
 [
   {
-    "bn": "RPi_001/",
+    "bn": "G_001/P1_R1/",
     "n": "pump_status",
     "v": 1,
     "u": "on/off",
@@ -141,11 +141,11 @@ Payload:
 
 Pump OFF:
 ```
-Topic: garden/RPi_001/pump
+Topic: garden/G_001/P1_R1/pump
 Payload:
 [
   {
-    "bn": "RPi_001/",
+    "bn": "G_001/P1_R1/",
     "n": "pump_status",
     "v": 0,
     "u": "on/off",
@@ -298,9 +298,9 @@ Keep Alive: 60 seconds
 
 ### Default Subscriptions
 
-- **Device Connector**: Subscribe to `garden/{device_id}/pump`
-- **Smart Irrigation Service**: Subscribe to `garden/+/telemetry`
-- **Fault Detection Service**: Subscribe to `garden/+/telemetry` and `garden/+/pump`
+- **Device Connector**: Subscribe to `garden/{garden_id}/+/pump`
+- **Smart Irrigation Service**: Subscribe to `garden/+/+/telemetry`
+- **Fault Detection Service**: Subscribe to `garden/+/+/telemetry` and `garden/+/+/pump`
 - **Influx Adaptor**: Subscribe to `garden/#`
 - **Statistics Service**: Subscribe to `garden/alerts/faults`
 - **Telegram Bot**: Subscribe to `garden/alerts/faults` and `garden/+/pump`

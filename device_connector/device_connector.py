@@ -143,7 +143,7 @@ class DeviceConnector:
             temp, air_hum, moisture = self.simulate_sensors(s_id)
 
             payload = [
-                {"bn": f"{self.device_id}/{s_id}/", "n": "temperature",  "v": temp,     "u": "Cel",  "t": ts},
+                {"bn": f"{self.garden_id}/{s_id}/", "n": "temperature",  "v": temp,     "u": "Cel",  "t": ts},
                 {"n": "air_humidity",                                      "v": air_hum,  "u": "%RH",  "t": ts},
                 {"n": "soil_moisture",                                     "v": round(moisture, 1), "u": "%RH", "t": ts}
             ]

@@ -120,7 +120,7 @@ class StatisticsService:
             
             return [
                 {"time": (datetime.now() - timedelta(days=i)).isoformat(),
-                 "value": 1, "device": "RPi_001", "sensor": "pump_status"}
+                 "value": 1, "garden_id": "G_001", "slot_id": "P1_R1", "sensor": "pump_status"}
                 for i in range(5)
             ]
     
