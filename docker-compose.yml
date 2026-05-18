@@ -27,7 +27,7 @@ services:
       DOCKER_INFLUXDB_INIT_USERNAME: "davide"
       DOCKER_INFLUXDB_INIT_PASSWORD: "Progetto1234"
       DOCKER_INFLUXDB_INIT_ORG: "SmartGarden"
-      DOCKER_INFLUXDB_INIT_BUCKET: "telemetry_data"
+      DOCKER_INFLUXDB_INIT_BUCKET: "garden_metrics"
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: "dOzXCt01RpXm58Zh_Twn57mRkeRttHvtmbJi6FdPdM0kJh4D-7t2ldF2Ni8YeUg8QCXCqShqC6xMn8IViISstA=="
     restart: always
 
@@ -69,7 +69,7 @@ services:
       - INFLUX_URL=https://us-east-1-1.aws.cloud2.influxdata.com
       - INFLUX_TOKEN=u66UJ0P2mY0WxolaK1-dqhn6Kl70Q1LDuMcsL_28Jej0FnUoiH31VHzpz6O73Z2gNqfakdWYPhOoSd1aVNKdAA==
       - INFLUX_ORG=e5fa79d45d607722
-      - INFLUX_BUCKET=telemetry_data
+      - INFLUX_BUCKET=garden_metrics
     ports:
       - "8081:8081"
     depends_on:
