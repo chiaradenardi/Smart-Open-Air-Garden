@@ -6,6 +6,13 @@ import os
 import paho.mqtt.client as mqtt
 import threading
 
+# Thread-safe print lock
+_print_lock = threading.Lock()
+
+def safe_print(*args, **kwargs):
+    with _print_lock:
+        print(*args, **kwargs)
+
 
 class DeviceConnector(threading.Thread):
     """This class represents the Raspberry Pi in a garden. 
@@ -65,7 +72,7 @@ class DeviceConnector(threading.Thread):
         if self.pump_states.get(slot_id) == "ON":
             new_moisture = min(100.0, current + 2.0)
         else:
-            new_moisture = max(30.0, current - 0.5)
+            new_moisture = max(30.0, current - random.uniform(0.5, 1.5))
 
         self.slot_moisture[slot_id] = new_moisture
         return temp, air_humidity, new_moisture
@@ -75,13 +82,13 @@ class DeviceConnector(threading.Thread):
     def _on_connect(self, client, userdata, flags, rc):
         """When connected to MQTT, it subscribes to the pump topics for all slots."""
         if rc == 0:
-            print(f"[MQTT - {self.device_id}] Connection established with broker")
+            safe_print(f"[MQTT - {self.device_id}] Connection established with broker")
             for slot in self.slots:
                 topic = f"garden/{self.garden_id}/{slot['slotID']}/pump"
                 client.subscribe(topic)
-                print(f"[MQTT - {self.device_id}] Subscribed to: {topic}")
+                safe_print(f"[MQTT - {self.device_id}] Subscribed to: {topic}")
         else:
-            print(f"[MQTT - {self.device_id}] Connection failed with error code: {rc}")
+            safe_print(f"[MQTT - {self.device_id}] Connection failed with error code: {rc}")
 
     def _on_message(self, client, userdata, msg):
         """Reads incoming MQTT messages and turns the simulated pump ON or OFF."""
@@ -91,7 +98,7 @@ class DeviceConnector(threading.Thread):
             return
         slot_id = parts[2]
 
-        print(f"\n[MQTT Received - {self.device_id}] Topic: {msg.topic} | Payload: {payload_str}")
+        safe_print(f"\n[MQTT Received - {self.device_id}] Topic: {msg.topic} | Payload: {payload_str}")
         try:
             data = json.loads(payload_str)
             if isinstance(data, list):
@@ -99,13 +106,13 @@ class DeviceConnector(threading.Thread):
                     if entry.get("n") == "pump_status":
                         if entry.get("v") == 1:
                             self.pump_states[slot_id] = "ON"
-                            print(f">>> [{self.garden_id}/{slot_id}] Pump activated")
+                            safe_print(f">>> [{self.garden_id}/{slot_id}] Pump activated")
                         elif entry.get("v") == 0:
                             self.pump_states[slot_id] = "OFF"
-                            print(f">>> [{self.garden_id}/{slot_id}] Pump deactivated")
+                            safe_print(f">>> [{self.garden_id}/{slot_id}] Pump deactivated")
                         break
         except Exception as e:
-            print(f"[ERROR - {self.device_id}] Failed to parse payload: {e}")
+            safe_print(f"[ERROR - {self.device_id}] Failed to parse payload: {e}")
 
     def setup_mqtt(self):
         """Prepares the MQTT client with ID and callbacks."""
@@ -161,7 +168,7 @@ class DeviceConnector(threading.Thread):
             ]
             topic = f"garden/{self.garden_id}/{s_id}/telemetry"
             self.client.publish(topic, json.dumps(payload))
-            print(f"[{self.garden_id}/{s_id}] Temp:{temp}°C | Moisture:{round(moisture,1)}% | Pump:{self.pump_states.get(s_id,'OFF')}")
+            safe_print(f"[{self.garden_id}/{s_id}] Temp:{temp}°C | Moisture:{round(moisture,1)}% | Pump:{self.pump_states.get(s_id,'OFF')}")
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -196,7 +203,7 @@ class DeviceConnector(threading.Thread):
         if self.stop_event.is_set():
             return
         self.client.loop_start()
-        print(f"\n[INIT - {self.device_id}] Telemetry loop started for garden {self.garden_id} with {len(self.slots)} slot(s).")
+        safe_print(f"\n[INIT - {self.device_id}] Telemetry loop started for garden {self.garden_id} with {len(self.slots)} slot(s).")
 
         # 4. Telemetry loop
         try:
@@ -208,7 +215,7 @@ class DeviceConnector(threading.Thread):
                         break
                     time.sleep(0.1)
         finally:
-            print(f"\n[STOP - {self.device_id}] Connector terminated. Disconnecting.")
+            safe_print(f"\n[STOP - {self.device_id}] Connector terminated. Disconnecting.")
             self.stop()
 
     def stop(self):
@@ -235,11 +242,11 @@ class DeviceConnectorManager:
             r.raise_for_status()
             return r.json()
         except Exception as e:
-            print(f"[MANAGER] Catalog unreachable: {e}")
+            safe_print(f"[MANAGER] Catalog unreachable: {e}")
             return []
 
     def start(self):
-        print("[MANAGER] Starting dynamic Device Connector Manager...")
+        safe_print("[MANAGER] Starting dynamic Device Connector Manager...")
         try:
             while True:
                 gardens = self.fetch_gardens()
@@ -256,13 +263,13 @@ class DeviceConnectorManager:
                 # 1. Start connectors for new active garden devices
                 for g_id, d_id in current_active_gardens.items():
                     if g_id not in self.active_connectors:
-                        print(f"[MANAGER] New active device detected for garden {g_id}: {d_id}. Starting simulator...")
+                        safe_print(f"[MANAGER] New active device detected for garden {g_id}: {d_id}. Starting simulator...")
                         connector = DeviceConnector(self.catalog_url, g_id, d_id)
                         connector.start()
                         self.active_connectors[g_id] = connector
                     elif self.active_connectors[g_id].device_id != d_id:
                         # Device ID changed for this garden
-                        print(f"[MANAGER] Device changed for garden {g_id}: {self.active_connectors[g_id].device_id} -> {d_id}. Restarting simulator...")
+                        safe_print(f"[MANAGER] Device changed for garden {g_id}: {self.active_connectors[g_id].device_id} -> {d_id}. Restarting simulator...")
                         self.active_connectors[g_id].stop()
                         self.active_connectors[g_id].join()
                         connector = DeviceConnector(self.catalog_url, g_id, d_id)
@@ -272,19 +279,19 @@ class DeviceConnectorManager:
                 # 2. Stop connectors for gardens that are no longer active/deleted
                 for g_id in list(self.active_connectors.keys()):
                     if g_id not in current_active_gardens:
-                        print(f"[MANAGER] Device/garden removed for {g_id}. Stopping simulator...")
+                        safe_print(f"[MANAGER] Device/garden removed for {g_id}. Stopping simulator...")
                         self.active_connectors[g_id].stop()
                         self.active_connectors[g_id].join()
                         del self.active_connectors[g_id]
 
                 time.sleep(10)
         except KeyboardInterrupt:
-            print("[MANAGER] Terminating manager. Stopping all simulators...")
+            safe_print("[MANAGER] Terminating manager. Stopping all simulators...")
             for connector in self.active_connectors.values():
                 connector.stop()
             for connector in self.active_connectors.values():
                 connector.join()
-            print("[MANAGER] Done.")
+            safe_print("[MANAGER] Done.")
 
 
 if __name__ == "__main__":
