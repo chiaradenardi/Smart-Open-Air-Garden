@@ -1,0 +1,147 @@
+openapi: 3.0.0
+info:
+  title: Smart Open Air Garden - Statistics Service API
+  description: Water savings statistics and pump history analytics
+  version: 1.0.0
+  contact:
+    name: Smart Open Air Garden Project
+
+servers:
+  - url: http://statistics-service:8090
+    description: Statistics Service
+
+tags:
+  - name: Statistics
+    description: Water usage and savings statistics endpoints
+  - name: History
+    description: Pump operation history endpoints
+
+paths:
+  /statistics/{period}:
+    get:
+      tags:
+        - Statistics
+      summary: Get Water Savings Statistics
+      description: Retrieve calculated water savings and cost benefits for a time period
+      operationId: getStatistics
+      parameters:
+        - name: period
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [7d, 30d, 1y]
+          description: Time period for statistics (7 days, 30 days, 1 year)
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatisticsResponse'
+        '400':
+          description: Invalid period parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /pump-history/{period}:
+    get:
+      tags:
+        - History
+      summary: Get Pump Operation History
+      description: Retrieve detailed pump operation history for analysis
+      operationId: getPumpHistory
+      parameters:
+        - name: period
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [7d, 30d, 1y]
+          description: Time period for history
+      responses:
+        '200':
+          description: Pump history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PumpHistoryEntry'
+        '400':
+          description: Invalid period parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    StatisticsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        period:
+          type: string
+          description: Statistics period
+        water_saved_liters:
+          type: number
+          description: Total water saved in liters
+        money_saved_euros:
+          type: number
+          description: Total money saved in euros
+        average_daily_savings:
+          type: number
+          description: Average daily water savings in liters
+        pump_runtime_minutes:
+          type: number
+          description: Total pump runtime in minutes
+      required: [status, period]
+
+    PumpHistoryEntry:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        device_id:
+          type: string
+        action:
+          type: string
+          enum: [ON, OFF]
+        duration_minutes:
+          type: number
+        water_used_liters:
+          type: number
+      required: [timestamp, device_id, action]
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+      required: [status, code, message]

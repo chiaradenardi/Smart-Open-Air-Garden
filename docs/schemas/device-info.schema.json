@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Device Information",
+  "description": "IoT device configuration and metadata from service catalog",
+  "type": "object",
+  "properties": {
+    "deviceID": {
+      "type": "string",
+      "description": "Unique device identifier (e.g., 'RPi_001')"
+    },
+    "config": {
+      "type": "object",
+      "description": "Device-specific configuration",
+      "properties": {
+        "clientID": {
+          "type": "string",
+          "description": "MQTT client ID for this device"
+        }
+      }
+    },
+    "slotID": {
+      "type": "string",
+      "description": "Garden slot this device is installed in"
+    },
+    "plantID": {
+      "type": "string",
+      "description": "Plant/crop identifier in this slot"
+    },
+    "slotName": {
+      "type": "string",
+      "description": "Human-readable name for the garden slot"
+    },
+    "lastUpdate": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last update timestamp"
+    }
+  },
+  "required": ["deviceID"],
+  "additionalProperties": true,
+  "example": {
+    "deviceID": "RPi_001",
+    "config": {
+      "clientID": "Client_RPi_001"
+    },
+    "slotID": "slot_1",
+    "plantID": "tomato",
+    "slotName": "Zone A - Tomatoes",
+    "lastUpdate": "2024-05-18T12:00:00.000Z"
+  }
+}
