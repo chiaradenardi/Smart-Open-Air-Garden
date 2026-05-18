@@ -5,129 +5,143 @@ import json
 import os
 import paho.mqtt.client as mqtt
 
-CATALOG_URL = os.getenv("CATALOG_URL", "http://service-catalog:8080/broker")
-DEVICE_ID = os.getenv("DEVICE_ID", "RPi_001")
-pump_state = "OFF"   # global variable for simulating the state of our physical actuator 
+CATALOG_URL = os.getenv("CATALOG_URL", "http://service-catalog:8080")
+GARDEN_ID   = os.getenv("GARDEN_ID",   "G_001")
+DEVICE_ID   = os.getenv("DEVICE_ID",   "RPi_001")
 
-
-def simulate_sensors(current_moisture):
-    #DHT11 and humidity sensors'simulation
-    termp = round(random.uniform(20.0, 24.0), 1)
-    air_humidity = round(random.uniform(40.0, 50.0), 1)
-    
-    global pump_state
-    if pump_state == "ON":
-        new_moisture = min(100.0, current_moisture + 2.0)  
-    else:
-        new_moisture = max(30.0, current_moisture - 0.5)  #soil drying
-        
-    return termp, air_humidity, new_moisture
+# slot_id -> pump state ("ON"/"OFF")
+pump_states = {}
 
 
 def get_broker_config():
-    #Fetches data via REST from catalog
-    print("[INIT] Requesting configuration from Catalog")
+    print("[INIT] Requesting broker config from Catalog")
     try:
-        response = requests.get(CATALOG_URL, timeout=10)
-        response.raise_for_status()
-        configuration_data = response.json()
-        print(f"[INIT] Settings received: {configuration_data}")
-        return configuration_data
-    except requests.exceptions.RequestException as e:
-        print(f"[ERROR] Failed to reach Catalog. Details: {e}")
+        r = requests.get(f"{CATALOG_URL}/broker", timeout=10)
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        print(f"[ERROR] Cannot reach Catalog: {e}")
         return None
 
 
-def on_connect(client, userdata, flags, rc): 
-    if rc == 0:
-        print("[MQTT] Connection established with broker")
-        client.subscribe(userdata['command_topic'])
-        print(f"[MQTT] Listening to topic commands: {userdata['command_topic']}")
+def get_garden_slots():
+    """Fetch the list of slots for this garden from the Catalog."""
+    try:
+        r = requests.get(f"{CATALOG_URL}/gardens/{GARDEN_ID}/slots", timeout=10)
+        r.raise_for_status()
+        slots = r.json()
+        print(f"[INIT] Garden {GARDEN_ID}: {len(slots)} slot(s) found")
+        return slots
+    except Exception as e:
+        print(f"[ERROR] Cannot fetch slots for garden {GARDEN_ID}: {e}")
+        return []
+
+
+def simulate_sensors(slot_id, current_moisture):
+    temp        = round(random.uniform(20.0, 24.0), 1)
+    air_humidity = round(random.uniform(40.0, 50.0), 1)
+    if pump_states.get(slot_id) == "ON":
+        new_moisture = min(100.0, current_moisture + 2.0)
     else:
-        print(f"[MQTT] Connection failed with error code: {rc}")
+        new_moisture = max(30.0, current_moisture - 0.5)
+    return temp, air_humidity, new_moisture
+
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("[MQTT] Connected to broker")
+        # subscribe to pump commands for every slot
+        for slot_id in userdata["slot_ids"]:
+            topic = f"garden/{GARDEN_ID}/{slot_id}/pump"
+            client.subscribe(topic)
+            print(f"[MQTT] Subscribed to: {topic}")
+    else:
+        print(f"[MQTT] Connection failed: {rc}")
+
 
 def on_message(client, userdata, msg):
-    #toggle pump (on/off) based on message content
-    global pump_state
+    global pump_states
     payload_str = msg.payload.decode('utf-8')
-    print(f"\n[MQTT Received] Topic: {msg.topic} | Action: {payload_str}")
-    
+    parts = msg.topic.split('/')          # garden / G_001 / P1_R1 / pump
+    if len(parts) < 4:
+        return
+    slot_id = parts[2]
     try:
         data = json.loads(payload_str)
-        # Handle SenML format
         if isinstance(data, list):
             for entry in data:
                 if entry.get("n") == "pump_status":
                     if entry.get("v") == 1:
-                        pump_state = "ON"
-                        print(">>> SYSTEM UPDATE: Pump activated")
+                        pump_states[slot_id] = "ON"
+                        print(f"[{slot_id}] Pump activated")
                     elif entry.get("v") == 0:
-                        pump_state = "OFF"
-                        print(">>> SYSTEM UPDATE: Pump deactivated")
+                        pump_states[slot_id] = "OFF"
+                        print(f"[{slot_id}] Pump deactivated")
                     break
     except Exception as e:
-        print(f"[ERROR] Failed to parse payload: {e}")
+        print(f"[ERROR] Payload parse error: {e}")
 
 
 if __name__ == "__main__":
-    broker_configuration = None
-    while not broker_configuration: 
-        broker_configuration = get_broker_config() # when Catalog is availabe 
-        if not broker_configuration:
+    # 1. Wait for catalog
+    broker_cfg = None
+    while not broker_cfg:
+        broker_cfg = get_broker_config()
+        if not broker_cfg:
             time.sleep(5)
-            
-    # Ottieni la configurazione specifica del dispositivo dal catalogo per leggere il Client ID
-    device_client_id = f"Client_{DEVICE_ID}" # Fallback
-    try:
-        catalog_base = CATALOG_URL.replace("/broker", "")
-        res = requests.get(f"{catalog_base}/devices/{DEVICE_ID}", timeout=10)
-        if res.status_code == 200 and "config" in res.json():
-            device_client_id = res.json()["config"].get("clientID", device_client_id)
-            print(f"[INIT] Device Client ID fetched: {device_client_id}")
-    except Exception as e:
-        print(f"[WARNING] Could not fetch specific device config, using fallback ID {device_client_id}: {e}")
 
-    broker_ip = broker_configuration.get("broker_name", "message-broker") 
-    telemetry_topic = f"garden/{DEVICE_ID}/telemetry"  
-    command_topic = f"garden/{DEVICE_ID}/pump"  
-    
-    # setup MQTT Client passing topics through callback and setting the Client ID
-    client = mqtt.Client(client_id=device_client_id, userdata={'command_topic': command_topic})
+    # 2. Fetch garden slots
+    slots = []
+    while not slots:
+        slots = get_garden_slots()
+        if not slots:
+            time.sleep(5)
+
+    # Init per-slot state
+    slot_moisture = {s["slotID"]: 60.0 for s in slots}
+    for s in slots:
+        pump_states[s["slotID"]] = "OFF"
+
+    slot_ids = [s["slotID"] for s in slots]
+
+    # 3. Connect MQTT
+    broker_ip = broker_cfg.get("broker_name", "message-broker")
+    client_id = f"Client_{DEVICE_ID}"
+    client = mqtt.Client(client_id=client_id, userdata={"slot_ids": slot_ids})
     client.on_connect = on_connect
     client.on_message = on_message
-    
-    print(f"[SETUP] Connecting to broker at: {broker_ip} with ID {device_client_id}")
+
+    print(f"[SETUP] Connecting to broker {broker_ip} as {client_id}")
     while True:
         try:
             client.connect(broker_ip, 1883, 60)
-            break 
+            break
         except Exception as e:
-            print(f"[ERROR] MQTT Connection failed. Retrying... ({e})")
-            time.sleep(5)  
-        
+            print(f"[ERROR] MQTT connection failed, retrying... ({e})")
+            time.sleep(5)
 
     client.loop_start()
-    soil_moisture = 60.0  # default
-    print("\n[INIT] Telemetry loop started. Press Ctrl+C to stop.")    
-    
+    print(f"[INIT] Telemetry loop started for garden {GARDEN_ID} with {len(slots)} slot(s).")
+
     try:
-        while True:               
-            # data acquisition from our simulated sensors
-            temp, air_hum, soil_moisture = simulate_sensors(soil_moisture)
-            
-            # our message payload to be sent to the broker in SenML format
-            payload = [
-                {"bn": f"{DEVICE_ID}/", "n": "temperature", "v": temp, "u": "Cel", "t": int(time.time())},
-                {"n": "air_humidity", "v": air_hum, "u": "%RH", "t": int(time.time())},
-                {"n": "soil_moisture", "v": soil_moisture, "u": "%RH", "t": int(time.time())}
-            ]
-            
-            client.publish(telemetry_topic, json.dumps(payload))
-            print(f"[TELEMETRY] Temp: {temp}°C | Soil Moisture: {soil_moisture}% | Pump State: {pump_state}")
-            
-            time.sleep(5)  
-            
+        while True:
+            ts = int(time.time())
+            for s in slots:
+                slot_id = s["slotID"]
+                temp, air_hum, slot_moisture[slot_id] = simulate_sensors(slot_id, slot_moisture[slot_id])
+
+                payload = [
+                    {"bn": f"{DEVICE_ID}/{slot_id}/", "n": "temperature",    "v": temp,                            "u": "Cel",  "t": ts},
+                    {"n": "air_humidity",                                      "v": air_hum,                         "u": "%RH",  "t": ts},
+                    {"n": "soil_moisture",                                     "v": round(slot_moisture[slot_id], 1), "u": "%RH",  "t": ts}
+                ]
+                topic = f"garden/{GARDEN_ID}/{slot_id}/telemetry"
+                client.publish(topic, json.dumps(payload))
+                print(f"[{GARDEN_ID}/{slot_id}] Temp:{temp}°C Moisture:{round(slot_moisture[slot_id],1)}% Pump:{pump_states[slot_id]}")
+
+            time.sleep(5)
+
     except KeyboardInterrupt:
-        print("\n[STOP] Connector terminated by user. Disconnecting.")
+        print("[STOP] Connector stopped.")
         client.loop_stop()
         client.disconnect()

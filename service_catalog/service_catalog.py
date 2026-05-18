@@ -3,584 +3,518 @@ import time
 import json
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _load():
+    with open("catalogManager.json", "r") as f:
+        return json.load(f)
+
+def _save(data):
+    data["lastUpdateJSON"] = time.time()
+    with open("catalogManager.json", "w") as f:
+        json.dump(data, f, indent=4)
+
+def _find_garden(data, garden_id):
+    for g in data["gardensList"]:
+        if g["gardenID"] == garden_id:
+            return g
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /broker
+# ─────────────────────────────────────────────────────────────────────────────
+
 class BrokerEndpoint:
-    exposed=True
+    exposed = True
 
     def GET(self):
-        with open("catalogManager.json", "r") as f:
-            data=json.load(f)
-        broker=data["broker"]
-        pack_to_send={
-            "broker_name":broker["broker_name"],
-            "broker_port":broker["port"]
-        }
-        return json.dumps(pack_to_send,indent=4)
+        data = _load()
+        b = data["broker"]
+        return json.dumps({"broker_name": b["broker_name"], "broker_port": b["port"]}, indent=4)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /price
+# ─────────────────────────────────────────────────────────────────────────────
 
 class PriceEndpoint:
-    exposed=True
+    exposed = True
+
     def GET(self):
-        with open("catalogManager.json", "r") as f:
-            data=json.load(f)
-        price=data["waterPricePerM3"]
-        return json.dumps(price,indent=4)
-    
+        data = _load()
+        return json.dumps(data["waterPricePerM3"], indent=4)
+
     def PUT(self):
-        body = cherrypy.request.body.read().decode('utf-8')
-        body_json=json.loads(body)
-        if "NewWaterPricePerM3" not in body_json:
-             return json.dumps({"error": "Data missing (NewWaterPricePerM3 not present in body)"}, indent=4)
-        
-        f=open("catalogManager.json","r")
-        data=json.load(f)
-        f.close()
-        data["waterPricePerM3"]=body_json["NewWaterPricePerM3"]
-        file=open("catalogManager.json","w")
-        json.dump(data,file,indent=4)
-        file.close()
-        return json.dumps({
-            "result": "Water price successfully updated",
-            "newPrice": data["waterPricePerM3"]
-        }, indent=4)
+        body = json.loads(cherrypy.request.body.read().decode('utf-8'))
+        if "NewWaterPricePerM3" not in body:
+            return json.dumps({"error": "Missing NewWaterPricePerM3"}, indent=4)
+        data = _load()
+        data["waterPricePerM3"] = body["NewWaterPricePerM3"]
+        _save(data)
+        return json.dumps({"result": "Price updated", "newPrice": data["waterPricePerM3"]}, indent=4)
 
 
-#******************************************************************************************
-# SLOTS API REST
-#******************************************************************************************
+# ─────────────────────────────────────────────────────────────────────────────
+# /gardens  (handles all sub-paths via *uri)
+#
+# GET    /gardens                            → list all gardens
+# POST   /gardens                            → create garden
+# GET    /gardens/{gID}                      → single garden
+# DELETE /gardens/{gID}                      → delete garden
+# GET    /gardens/{gID}/slots                → slots list
+# POST   /gardens/{gID}/slots                → add slot
+# GET    /gardens/{gID}/slots/{sID}          → single slot
+# PUT    /gardens/{gID}/slots/{sID}          → update slot (plantID)
+# DELETE /gardens/{gID}/slots/{sID}          → remove slot
+# GET    /gardens/{gID}/device               → device info
+# PUT    /gardens/{gID}/device               → update device
+# GET    /gardens/{gID}/grid                 → grid
+# PUT    /gardens/{gID}/grid                 → update grid
+# GET    /gardens/{gID}/location             → location
+# PUT    /gardens/{gID}/location             → update location
+# GET    /gardens/{gID}/owners               → owner user objects
+# POST   /gardens/{gID}/owners               → add owner (body: {userID})
+# DELETE /gardens/{gID}/owners/{uID}         → remove owner
+# ─────────────────────────────────────────────────────────────────────────────
 
-class SlotsEndpoint:
-    exposed=True
-    def GET(self,*uri,**params):
-        with open("catalogManager.json", "r") as f:
-            data=json.load(f)
-        trovato=False
-        if len(uri) > 0:
-            for i in data["garden_slots"]:
-                if uri[0] == i["slotID"]:
-                    slot = i
-                    trovato=True
-                    break
-            if trovato:
-                return json.dumps(slot, indent=4)
-            else:
-                return json.dumps({"error": f"Errore: Slot con ID '{uri[0]}' non trovata nel catalogo."}, indent=4)   
-        return json.dumps(data["garden_slots"], indent=4)
-        
-    def PUT(self,*uri,**params):
-            body = cherrypy.request.body.read().decode('utf-8')
-            body_json=json.loads(body)
-            f=open("catalogManager.json","r")
-            data=json.load(f)
-            trovato=False
-            f.close()
-            for i in data["garden_slots"]:
-                if body_json["slotID"]==i["slotID"]:
-                    i["plantID"]=body_json["plantID"]
-                    trovato=True
-                    break
-            if trovato:
-                file=open("catalogManager.json","w")
-                json.dump(data,file,indent=4)
-                file.close()
-                return json.dumps(data,indent=4)
-            else:
-                return json.dumps({"error": "ID NOT FOUND"}, indent=4)
-        
-    def POST(self):
-        body = cherrypy.request.body.read().decode('utf-8')
-        body_json=json.loads(body)
-        if "slotID" not in body_json or "plantID" not in body_json or "deviceID" not in body_json:
-            return json.dumps({"error": "Data missing (slotID, plantID or deviceID not present)"}, indent=4)
-              
-        f=open("catalogManager.json","r")
-        data=json.load(f)
-        trovato=False
-        f.close()
-        
-        # Check 1: SLOT ID already in the system
-        for i in data["garden_slots"]:
-            if body_json["slotID"]==i["slotID"]:
-                trovato=True
-                break
-        if trovato:
-            return json.dumps({"error":"SLOT ID already in the system"})
-        
-        # Check 2: DEVICE ID already in use by another slot
-        device_already_used = False
-        device_used_by_slot = None
-        for slot in data["garden_slots"]:
-            if body_json["deviceID"] == slot["deviceID"]:
-                device_already_used = True
-                device_used_by_slot = slot["slotID"]
-                break
-        
-        if device_already_used:
-            return json.dumps({
-                "error": f"Device '{body_json['deviceID']}' is already in use by slot '{device_used_by_slot}'",
-                "deviceID": body_json["deviceID"],
-                "used_by_slot": device_used_by_slot
-            }, indent=4)
-        
-        # If all checks pass, add the slot
-        data["garden_slots"].append(body_json)
-        file=open("catalogManager.json","w")
-        json.dump(data,file,indent=4)
-        file.close()
-        return json.dumps({"result":"SLOT successfully added"})
-    
-    def DELETE(self,*uri,**params):     
-        f=open("catalogManager.json","r")
-        data=json.load(f)
-        f.close() 
-        trovato=False
-        if len(uri) > 0:
-            for i in data["garden_slots"]:
-                if uri[0]==i["slotID"]:
-                    trovato=True
-                    data["garden_slots"].remove(i)
-                    break
-            if trovato:
-                file=open("catalogManager.json","w")
-                json.dump(data,file,indent=4)
-                file.close()
-                return json.dumps({"result":"slot successfully removed"})
-            else:
-                return json.dumps({"error":"SLOT ID not found"})
-        return json.dumps({"error": "Missing SLOT ID in the URL"}, indent=4)
+class GardensEndpoint:
+    exposed = True
 
-#******************************************************************************************
-# DEVICES API REST
-#******************************************************************************************
+    # ── GET ──────────────────────────────────────────────────────────────────
 
-    
-class DevicesEndpoint:
-    exposed=True
-    
-    def GET(self,*uri,**params):
-        with open("catalogManager.json", "r") as f:
-            data=json.load(f)
-        trovato=False
-        if len(uri) > 0:
-            for i in data["devicesList"]:
-                if uri[0] == i["deviceID"]:
-                    device = i
-                    trovato=True
-                    break
-            if trovato:
-                return json.dumps(device, indent=4)
-            else:
-                return json.dumps({"error": f"Errore: Device con ID '{uri[0]}' non trovato nel catalogo."}, indent=4)   
-        return json.dumps(data["devicesList"], indent=4)
-        
-    def PUT(self,*uri,**params):
-            body = cherrypy.request.body.read().decode('utf-8')
-            body_json=json.loads(body)
-            f=open("catalogManager.json","r")
-            data=json.load(f)
-            trovato=False
-            f.close()
-            for i in data["devicesList"]:
-                if body_json["deviceID"]==i["deviceID"]:
-                    # update the status instead of the plantID
-                    i["status"]=body_json["status"]
-                    trovato=True
-                    break
-            if trovato:
-                file=open("catalogManager.json","w")
-                json.dump(data,file,indent=4)
-                file.close()
-                return json.dumps(data,indent=4)
-            else:
-                return json.dumps({"error": "ID NOT FOUND"}, indent=4)
-        
-    def POST(self):
-        body = cherrypy.request.body.read().decode('utf-8')
-        body_json=json.loads(body)
-        # Check on the base keys for devices
-        if "deviceID" not in body_json or "deviceName" not in body_json:
-            return json.dumps({"error": "Data missing (deviceID or deviceName not present)"}, indent=4)
-              
-        f=open("catalogManager.json","r")
-        data=json.load(f)
-        trovato=False
-        f.close()
-        
-        # Clean input ID to avoid unwanted spaces and case issues
-        new_device_id = body_json["deviceID"].strip()
-        body_json["deviceID"] = new_device_id
-        
-        for i in data["devicesList"]:
-            # case-insensitive check
-            if new_device_id.lower() == i["deviceID"].lower():
-                trovato=True
-                break
-        if trovato:
-            return json.dumps({"error":"DEVICE ID already in the system"})
-        else:
-            data["devicesList"].append(body_json)
-            file=open("catalogManager.json","w")
-            json.dump(data,file,indent=4)
-            file.close()
-            return json.dumps({"result":"DEVICE successfully added"})
-    
-    def DELETE(self,*uri,**params):     
-        f=open("catalogManager.json","r")
-        data=json.load(f)
-        f.close() 
-        trovato=False
-        if len(uri) > 0:
-            for i in data["devicesList"]:
-                if uri[0]==i["deviceID"]:
-                    trovato=True
-                    data["devicesList"].remove(i)
-                    break
-            if trovato:
-                file=open("catalogManager.json","w")
-                json.dump(data,file,indent=4)
-                file.close()
-                return json.dumps({"result":"device successfully removed"})
-            else:
-                return json.dumps({"error":"DEVICE ID not found"})
-        return json.dumps({"error": "Missing DEVICE ID in the URL"}, indent=4)
-    
-#******************************************************************************************
-# SERVICES API REST
-#******************************************************************************************
+    def GET(self, *uri, **params):
+        data = _load()
+
+        # /gardens
+        if len(uri) == 0:
+            return json.dumps(data["gardensList"], indent=4)
+
+        garden_id = uri[0]
+        garden = _find_garden(data, garden_id)
+        if not garden:
+            return json.dumps({"error": f"Garden '{garden_id}' not found"}, indent=4)
+
+        # /gardens/{gID}
+        if len(uri) == 1:
+            return json.dumps(garden, indent=4)
+
+        section = uri[1]
+
+        # /gardens/{gID}/slots
+        if section == "slots":
+            if len(uri) == 2:
+                return json.dumps(garden.get("slots", []), indent=4)
+            # /gardens/{gID}/slots/{sID}
+            slot_id = uri[2]
+            for s in garden.get("slots", []):
+                if s["slotID"] == slot_id:
+                    return json.dumps(s, indent=4)
+            return json.dumps({"error": f"Slot '{slot_id}' not found"}, indent=4)
+
+        if section == "device":
+            return json.dumps(garden.get("device", {}), indent=4)
+
+        if section == "grid":
+            return json.dumps(garden.get("grid", {"max_pumps": 4, "max_taps": 4}), indent=4)
+
+        if section == "location":
+            return json.dumps({"location": garden.get("location", "")}, indent=4)
+
+        if section == "owners":
+            owner_ids = garden.get("ownerIDs", [])
+            users = data.get("usersList", [])
+            owners = [u for u in users if u["userID"] in owner_ids]
+            return json.dumps(owners, indent=4)
+
+        return json.dumps({"error": "Invalid endpoint"}, indent=4)
+
+    # ── POST ─────────────────────────────────────────────────────────────────
+
+    def POST(self, *uri, **params):
+        body = json.loads(cherrypy.request.body.read().decode('utf-8'))
+        data = _load()
+
+        # POST /gardens — create garden
+        if len(uri) == 0:
+            required = ["gardenID", "gardenName"]
+            for k in required:
+                if k not in body:
+                    return json.dumps({"error": f"Missing field: {k}"}, indent=4)
+            if _find_garden(data, body["gardenID"]):
+                return json.dumps({"error": "Garden ID already exists"}, indent=4)
+            new_garden = {
+                "gardenID":   body["gardenID"],
+                "gardenName": body["gardenName"],
+                "location":   body.get("location", ""),
+                "grid":       body.get("grid", {"max_pumps": 4, "max_taps": 4}),
+                "device":     body.get("device", {}),
+                "slots":      [],
+                "ownerIDs":   body.get("ownerIDs", [])
+            }
+            data["gardensList"].append(new_garden)
+            _save(data)
+            return json.dumps({"result": "Garden created", "gardenID": new_garden["gardenID"]}, indent=4)
+
+        garden_id = uri[0]
+        garden = _find_garden(data, garden_id)
+        if not garden:
+            return json.dumps({"error": f"Garden '{garden_id}' not found"}, indent=4)
+
+        if len(uri) < 2:
+            return json.dumps({"error": "Specify a sub-resource (slots, owners)"}, indent=4)
+
+        section = uri[1]
+
+        # POST /gardens/{gID}/slots — add slot
+        if section == "slots":
+            if "slotID" not in body or "plantID" not in body:
+                return json.dumps({"error": "Missing slotID or plantID"}, indent=4)
+            for s in garden.get("slots", []):
+                if s["slotID"] == body["slotID"]:
+                    return json.dumps({"error": "Slot ID already exists in this garden"}, indent=4)
+            new_slot = {
+                "slotID":    body["slotID"],
+                "slotName":  body.get("slotName", f"Zone {body['slotID']}"),
+                "plantID":   body["plantID"],
+                "status":    body.get("status", "active"),
+                "sensors":   body.get("sensors", ["SoilMoisture", "DHT11"]),
+                "actuators": body.get("actuators", ["MicroServoPump"])
+            }
+            garden.setdefault("slots", []).append(new_slot)
+            _save(data)
+            return json.dumps({"result": "Slot added", "slotID": new_slot["slotID"]}, indent=4)
+
+        # POST /gardens/{gID}/owners — add owner
+        if section == "owners":
+            user_id = body.get("userID")
+            if not user_id:
+                return json.dumps({"error": "Missing userID"}, indent=4)
+            if user_id in garden.get("ownerIDs", []):
+                return json.dumps({"error": "User already an owner"}, indent=4)
+            garden.setdefault("ownerIDs", []).append(user_id)
+            _save(data)
+            return json.dumps({"result": "Owner added"}, indent=4)
+
+        return json.dumps({"error": "Invalid endpoint"}, indent=4)
+
+    # ── PUT ──────────────────────────────────────────────────────────────────
+
+    def PUT(self, *uri, **params):
+        body = json.loads(cherrypy.request.body.read().decode('utf-8'))
+        data = _load()
+
+        if len(uri) < 2:
+            return json.dumps({"error": "Specify garden ID and sub-resource"}, indent=4)
+
+        garden_id = uri[0]
+        garden = _find_garden(data, garden_id)
+        if not garden:
+            return json.dumps({"error": f"Garden '{garden_id}' not found"}, indent=4)
+
+        section = uri[1]
+
+        # PUT /gardens/{gID}/slots/{sID}
+        if section == "slots":
+            if len(uri) < 3:
+                return json.dumps({"error": "Specify slot ID"}, indent=4)
+            slot_id = uri[2]
+            for s in garden.get("slots", []):
+                if s["slotID"] == slot_id:
+                    if "plantID" in body:
+                        s["plantID"] = body["plantID"]
+                    if "slotName" in body:
+                        s["slotName"] = body["slotName"]
+                    if "status" in body:
+                        s["status"] = body["status"]
+                    _save(data)
+                    return json.dumps(s, indent=4)
+            return json.dumps({"error": f"Slot '{slot_id}' not found"}, indent=4)
+
+        # PUT /gardens/{gID}/device
+        if section == "device":
+            garden["device"] = body
+            _save(data)
+            return json.dumps({"result": "Device updated"}, indent=4)
+
+        # PUT /gardens/{gID}/grid
+        if section == "grid":
+            garden.setdefault("grid", {})
+            if "max_pumps" in body:
+                garden["grid"]["max_pumps"] = body["max_pumps"]
+            if "max_taps" in body:
+                garden["grid"]["max_taps"] = body["max_taps"]
+            _save(data)
+            return json.dumps({"result": "Grid updated", "grid": garden["grid"]}, indent=4)
+
+        # PUT /gardens/{gID}/location
+        if section == "location":
+            if "location" not in body:
+                return json.dumps({"error": "Missing location"}, indent=4)
+            garden["location"] = body["location"]
+            # also update global fallback
+            data["garden_location"] = body["location"]
+            _save(data)
+            return json.dumps({"result": "Location updated", "location": garden["location"]}, indent=4)
+
+        # PUT /gardens/{gID} — update name or ownerIDs
+        if len(uri) == 1:
+            if "gardenName" in body:
+                garden["gardenName"] = body["gardenName"]
+            if "ownerIDs" in body:
+                garden["ownerIDs"] = body["ownerIDs"]
+            _save(data)
+            return json.dumps({"result": "Garden updated"}, indent=4)
+
+        return json.dumps({"error": "Invalid endpoint"}, indent=4)
+
+    # ── DELETE ───────────────────────────────────────────────────────────────
+
+    def DELETE(self, *uri, **params):
+        data = _load()
+
+        if len(uri) == 0:
+            return json.dumps({"error": "Specify a garden ID"}, indent=4)
+
+        garden_id = uri[0]
+        garden = _find_garden(data, garden_id)
+        if not garden:
+            return json.dumps({"error": f"Garden '{garden_id}' not found"}, indent=4)
+
+        # DELETE /gardens/{gID}
+        if len(uri) == 1:
+            data["gardensList"].remove(garden)
+            _save(data)
+            return json.dumps({"result": f"Garden '{garden_id}' deleted"}, indent=4)
+
+        section = uri[1]
+
+        # DELETE /gardens/{gID}/slots/{sID}
+        if section == "slots" and len(uri) == 3:
+            slot_id = uri[2]
+            for s in garden.get("slots", []):
+                if s["slotID"] == slot_id:
+                    garden["slots"].remove(s)
+                    _save(data)
+                    return json.dumps({"result": f"Slot '{slot_id}' removed"}, indent=4)
+            return json.dumps({"error": f"Slot '{slot_id}' not found"}, indent=4)
+
+        # DELETE /gardens/{gID}/owners/{uID}
+        if section == "owners" and len(uri) == 3:
+            user_id = uri[2]
+            if user_id in garden.get("ownerIDs", []):
+                garden["ownerIDs"].remove(user_id)
+                _save(data)
+                return json.dumps({"result": f"Owner '{user_id}' removed"}, indent=4)
+            return json.dumps({"error": f"User '{user_id}' is not an owner"}, indent=4)
+
+        return json.dumps({"error": "Invalid endpoint"}, indent=4)
 
 
-class ServicesEndpoint:
-    exposed=True
-    def GET(self,*uri,**params):
-        with open("catalogManager.json", "r") as f:
-            data=json.load(f)
-        trovato=False
-        if len(uri) > 0:
-            for i in data["servicesList"]:
-                if uri[0] == i["serviceID"]:
-                    service = i
-                    trovato=True
-                    break
-            if trovato:
-                return json.dumps(service, indent=4)
-            else:
-                return json.dumps({"error": f"Errore: Service con ID '{uri[0]}' non trovato nel catalogo."}, indent=4)   
-        return json.dumps(data["servicesList"], indent=4)
-        
-    def PUT(self,*uri,**params):
-            body = cherrypy.request.body.read().decode('utf-8')
-            body_json=json.loads(body)
-            f=open("catalogManager.json","r")
-            data=json.load(f)
-            trovato=False
-            f.close()
-            for i in data["servicesList"]:
-                if body_json["serviceID"]==i["serviceID"]:
-                    # update the status of the service (e.g. if it goes offline)
-                    i["status"]=body_json["status"]
-                    trovato=True
-                    break
-            if trovato:
-                file=open("catalogManager.json","w")
-                json.dump(data,file,indent=4)
-                file.close()
-                return json.dumps(data,indent=4)
-            else:
-                return json.dumps({"error": "ID NOT FOUND"}, indent=4)
-        
-    def POST(self):
-        body = cherrypy.request.body.read().decode('utf-8')
-        body_json=json.loads(body)
-        if "serviceID" not in body_json or "serviceName" not in body_json:
-            return json.dumps({"error": "Data missing (serviceID or serviceName not present)"}, indent=4)
-              
-        f=open("catalogManager.json","r")
-        data=json.load(f)
-        trovato=False
-        f.close()
-        for i in data["servicesList"]:
-            if body_json["serviceID"]==i["serviceID"]:
-                trovato=True
-                break
-        if trovato:
-            return json.dumps({"error":"SERVICE ID already in the system"})
-        else:
-            data["servicesList"].append(body_json)
-            file=open("catalogManager.json","w")
-            json.dump(data,file,indent=4)
-            file.close()
-            return json.dumps({"result":"SERVICE successfully added"})
-    
-    def DELETE(self,*uri,**params):     
-        f=open("catalogManager.json","r")
-        data=json.load(f)
-        f.close() 
-        trovato=False
-        if len(uri) > 0:
-            for i in data["servicesList"]:
-                if uri[0]==i["serviceID"]:
-                    trovato=True
-                    data["servicesList"].remove(i)
-                    break
-            if trovato:
-                file=open("catalogManager.json","w")
-                json.dump(data,file,indent=4)
-                file.close()
-                return json.dumps({"result":"service successfully removed"})
-            else:
-                return json.dumps({"error":"SERVICE ID not found"})
-        return json.dumps({"error": "Missing SERVICE ID in the URL"}, indent=4)
-    
-#******************************************************************************************
-# Users API REST
-#******************************************************************************************
+# ─────────────────────────────────────────────────────────────────────────────
+# /users
+# ─────────────────────────────────────────────────────────────────────────────
 
 class UsersEndpoint:
-    exposed=True
-    def GET(self,*uri,**params):
-        with open("catalogManager.json", "r") as f:
-            data=json.load(f)
-        trovato=False
-        if len(uri) > 0:
-            for i in data["usersList"]:
-                if uri[0] == i["userID"]:
-                    user = i
-                    trovato=True
-                    break
-            if trovato:
-                return json.dumps(user, indent=4)
-            else:
-                return json.dumps({"error": f"Errore: User con ID '{uri[0]}' non trovato."}, indent=4)   
-        return json.dumps(data["usersList"], indent=4)
-        
-    def PUT(self,*uri,**params):
-            body = cherrypy.request.body.read().decode('utf-8')
-            body_json=json.loads(body)
-            f=open("catalogManager.json","r")
-            data=json.load(f)
-            trovato=False
-            f.close()
-            for i in data["usersList"]:
-                if body_json["userID"]==i["userID"]:
-                    # update the telegramChatID
-                    i["telegramChatID"]=body_json["telegramChatID"]
-                    trovato=True
-                    break
-            if trovato:
-                file=open("catalogManager.json","w")
-                json.dump(data,file,indent=4)
-                file.close()
-                return json.dumps(data,indent=4)
-            else:
-                return json.dumps({"error": "USER ID NOT FOUND"}, indent=4)
-        
-    def POST(self):
-        body = cherrypy.request.body.read().decode('utf-8')
-        body_json=json.loads(body)
-        if "userID" not in body_json or "userName" not in body_json or "telegramChatID" not in body_json:
-            return json.dumps({"error": "Data missing (userID, userName or telegramChatID not present)"}, indent=4)
-              
-        f=open("catalogManager.json","r")
-        data=json.load(f)
-        trovato=False
-        f.close()
-        for i in data["usersList"]:
-            if body_json["userID"]==i["userID"]:
-                trovato=True
-                break
-        if trovato:
-            return json.dumps({"error":"USER ID already in the system"})
-        else:
-            data["usersList"].append(body_json)
-            file=open("catalogManager.json","w")
-            json.dump(data,file,indent=4)
-            file.close()
-            return json.dumps({"result":"USER successfully added"})
-    
-    def DELETE(self,*uri,**params):     
-        f=open("catalogManager.json","r")
-        data=json.load(f)
-        f.close() 
-        trovato=False
-        if len(uri) > 0:
-            for i in data["usersList"]:
-                if uri[0]==i["userID"]:
-                    trovato=True
-                    data["usersList"].remove(i)
-                    break
-            if trovato:
-                file=open("catalogManager.json","w")
-                json.dump(data,file,indent=4)
-                file.close()
-                return json.dumps({"result":"user successfully removed"})
-            else:
-                return json.dumps({"error":"USER ID not found"})
-        return json.dumps({"error": "Missing USER ID in the URL"}, indent=4)
+    exposed = True
 
-#******************************************************************************************
-# STRATEGIES API REST
-#******************************************************************************************
+    def GET(self, *uri, **params):
+        data = _load()
+        if len(uri) > 0:
+            for u in data["usersList"]:
+                if uri[0] == u["userID"]:
+                    return json.dumps(u, indent=4)
+            return json.dumps({"error": f"User '{uri[0]}' not found"}, indent=4)
+        return json.dumps(data["usersList"], indent=4)
+
+    def PUT(self, *uri, **params):
+        body = json.loads(cherrypy.request.body.read().decode('utf-8'))
+        data = _load()
+        for u in data["usersList"]:
+            if body.get("userID") == u["userID"]:
+                u["telegramChatID"] = body["telegramChatID"]
+                _save(data)
+                return json.dumps({"result": "User updated"}, indent=4)
+        return json.dumps({"error": "USER ID NOT FOUND"}, indent=4)
+
+    def POST(self):
+        body = json.loads(cherrypy.request.body.read().decode('utf-8'))
+        if "userID" not in body or "userName" not in body or "telegramChatID" not in body:
+            return json.dumps({"error": "Missing userID, userName or telegramChatID"}, indent=4)
+        data = _load()
+        for u in data["usersList"]:
+            if body["userID"] == u["userID"]:
+                return json.dumps({"error": "USER ID already in the system"}, indent=4)
+        data["usersList"].append(body)
+        _save(data)
+        return json.dumps({"result": "USER successfully added"}, indent=4)
+
+    def DELETE(self, *uri, **params):
+        data = _load()
+        if len(uri) == 0:
+            return json.dumps({"error": "Missing USER ID"}, indent=4)
+        for u in data["usersList"]:
+            if uri[0] == u["userID"]:
+                data["usersList"].remove(u)
+                _save(data)
+                return json.dumps({"result": "User removed"}, indent=4)
+        return json.dumps({"error": "USER ID not found"}, indent=4)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /strategies
+# ─────────────────────────────────────────────────────────────────────────────
 
 class StrategiesEndpoint:
-    exposed=True
-    def GET(self,*uri,**params):
-        with open("catalogManager.json", "r") as f:
-            data=json.load(f)
-            
+    exposed = True
+
+    def GET(self, *uri, **params):
+        data = _load()
         if len(uri) > 0:
             plant_id = uri[0]
-            # check if the plantID is in the irrigation strategies
             if plant_id in data["irrigation_strategies"]:
                 return json.dumps(data["irrigation_strategies"][plant_id], indent=4)
-            else:
-                return json.dumps({"error": f"Errore: Strategia con ID '{plant_id}' non trovata."}, indent=4)   
+            return json.dumps({"error": f"Strategy '{plant_id}' not found"}, indent=4)
         return json.dumps(data["irrigation_strategies"], indent=4)
-        
-    def PUT(self,*uri,**params):
-            body = cherrypy.request.body.read().decode('utf-8')
-            body_json=json.loads(body)
-            f=open("catalogManager.json","r")
-            data=json.load(f)
-            f.close()
-            
-            plant_id = body_json.get("plantID")
-            if plant_id and plant_id in data["irrigation_strategies"]:
-                # update the moisture threshold
-                data["irrigation_strategies"][plant_id]["min_moisture_threshold"] = body_json["min_moisture_threshold"]
-                
-                file=open("catalogManager.json","w")
-                json.dump(data,file,indent=4)
-                file.close()
-                return json.dumps(data,indent=4)
-            else:
-                return json.dumps({"error": "PLANT ID NOT FOUND"}, indent=4)
-        
+
+    def PUT(self, *uri, **params):
+        body = json.loads(cherrypy.request.body.read().decode('utf-8'))
+        data = _load()
+        plant_id = body.get("plantID")
+        if plant_id and plant_id in data["irrigation_strategies"]:
+            data["irrigation_strategies"][plant_id]["min_moisture_threshold"] = body["min_moisture_threshold"]
+            _save(data)
+            return json.dumps({"result": "Strategy updated"}, indent=4)
+        return json.dumps({"error": "PLANT ID NOT FOUND"}, indent=4)
+
     def POST(self):
-        body = cherrypy.request.body.read().decode('utf-8')
-        body_json=json.loads(body)
-        if "plantID" not in body_json or "name" not in body_json or "min_moisture_threshold" not in body_json:
-            return json.dumps({"error": "Data missing"}, indent=4)
-              
-        f=open("catalogManager.json","r")
-        data=json.load(f)
-        f.close()
-        
-        plant_id = body_json["plantID"]
+        body = json.loads(cherrypy.request.body.read().decode('utf-8'))
+        if "plantID" not in body or "name" not in body or "min_moisture_threshold" not in body:
+            return json.dumps({"error": "Missing data"}, indent=4)
+        data = _load()
+        plant_id = body["plantID"]
         if plant_id in data["irrigation_strategies"]:
-            return json.dumps({"error":"STRATEGY ID already in the system"})
-        else:
-            # Direct addition to dictionary
-            data["irrigation_strategies"][plant_id] = {
-                "name": body_json["name"],
-                "min_moisture_threshold": body_json["min_moisture_threshold"]
-            }
-            file=open("catalogManager.json","w")
-            json.dump(data,file,indent=4)
-            file.close()
-            return json.dumps({"result":"STRATEGY successfully added"})
-    
-    def DELETE(self,*uri,**params):     
-        f=open("catalogManager.json","r")
-        data=json.load(f)
-        f.close() 
-        
+            return json.dumps({"error": "STRATEGY ID already exists"}, indent=4)
+        data["irrigation_strategies"][plant_id] = {
+            "name": body["name"],
+            "min_moisture_threshold": body["min_moisture_threshold"]
+        }
+        _save(data)
+        return json.dumps({"result": "Strategy added"}, indent=4)
+
+    def DELETE(self, *uri, **params):
+        data = _load()
+        if len(uri) == 0:
+            return json.dumps({"error": "Missing STRATEGY ID"}, indent=4)
+        plant_id = uri[0]
+        if plant_id in data["irrigation_strategies"]:
+            del data["irrigation_strategies"][plant_id]
+            _save(data)
+            return json.dumps({"result": "Strategy removed"}, indent=4)
+        return json.dumps({"error": "STRATEGY ID not found"}, indent=4)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /services
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ServicesEndpoint:
+    exposed = True
+
+    def GET(self, *uri, **params):
+        data = _load()
         if len(uri) > 0:
-            plant_id = uri[0]
-            if plant_id in data["irrigation_strategies"]:
-                # Use 'del' to delete a key in a dictionary
-                del data["irrigation_strategies"][plant_id]
-                file=open("catalogManager.json","w")
-                json.dump(data,file,indent=4)
-                file.close()
-                return json.dumps({"result":"strategy successfully removed"})
-            else:
-                return json.dumps({"error":"STRATEGY ID not found"})
-        return json.dumps({"error": "Missing STRATEGY ID in the URL"}, indent=4)
-    
-#******************************************************************************************
-# LOCATION API REST 
-#******************************************************************************************
+            for s in data["servicesList"]:
+                if uri[0] == s["serviceID"]:
+                    return json.dumps(s, indent=4)
+            return json.dumps({"error": f"Service '{uri[0]}' not found"}, indent=4)
+        return json.dumps(data["servicesList"], indent=4)
+
+    def PUT(self, *uri, **params):
+        body = json.loads(cherrypy.request.body.read().decode('utf-8'))
+        data = _load()
+        for s in data["servicesList"]:
+            if body.get("serviceID") == s["serviceID"]:
+                s["status"] = body["status"]
+                _save(data)
+                return json.dumps({"result": "Service updated"}, indent=4)
+        return json.dumps({"error": "SERVICE ID NOT FOUND"}, indent=4)
+
+    def POST(self):
+        body = json.loads(cherrypy.request.body.read().decode('utf-8'))
+        if "serviceID" not in body or "serviceName" not in body:
+            return json.dumps({"error": "Missing serviceID or serviceName"}, indent=4)
+        data = _load()
+        for s in data["servicesList"]:
+            if body["serviceID"] == s["serviceID"]:
+                return json.dumps({"error": "SERVICE ID already exists"}, indent=4)
+        data["servicesList"].append(body)
+        _save(data)
+        return json.dumps({"result": "Service added"}, indent=4)
+
+    def DELETE(self, *uri, **params):
+        data = _load()
+        if len(uri) == 0:
+            return json.dumps({"error": "Missing SERVICE ID"}, indent=4)
+        for s in data["servicesList"]:
+            if uri[0] == s["serviceID"]:
+                data["servicesList"].remove(s)
+                _save(data)
+                return json.dumps({"result": "Service removed"}, indent=4)
+        return json.dumps({"error": "SERVICE ID not found"}, indent=4)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /location  (global — used by WeatherServiceAdaptor)
+# ─────────────────────────────────────────────────────────────────────────────
+
 class LocationEndpoint:
     exposed = True
+
     def GET(self):
-        with open("catalogManager.json", "r") as f:
-            data = json.load(f)
-        # If no location is saved yet, return a default value
-        location = data.get("garden_location", "44.6458,10.9257") 
-        return json.dumps({"location": location}, indent=4)
+        data = _load()
+        return json.dumps({"location": data.get("garden_location", "44.6458,10.9257")}, indent=4)
 
     def PUT(self):
-        body = cherrypy.request.body.read().decode('utf-8')
-        body_json = json.loads(body)
-        if "location" not in body_json:
-            return json.dumps({"error": "Missing 'location' parameter"}, indent=4)
-            
-        with open("catalogManager.json", "r") as f:
-            data = json.load(f)
-            
-        data["garden_location"] = body_json["location"]
-        
-        with open("catalogManager.json", "w") as f:
-            json.dump(data, f, indent=4)
-            
-        return json.dumps({"result": "Location successfully updated", "location": data["garden_location"]}, indent=4)
-    
-#******************************************************************************************
-# GRID API REST 
-#******************************************************************************************
-class GridEndpoint:
-    exposed = True
-    def GET(self):
-        with open("catalogManager.json", "r") as f:
-            data = json.load(f)
-        return json.dumps(data.get("garden_grid", {"max_pumps": 3, "max_taps": 3}), indent=4)
+        body = json.loads(cherrypy.request.body.read().decode('utf-8'))
+        if "location" not in body:
+            return json.dumps({"error": "Missing location"}, indent=4)
+        data = _load()
+        data["garden_location"] = body["location"]
+        _save(data)
+        return json.dumps({"result": "Location updated", "location": data["garden_location"]}, indent=4)
 
-    def PUT(self):
-        body = cherrypy.request.body.read().decode('utf-8')
-        body_json = json.loads(body)
-        
-        with open("catalogManager.json", "r") as f:
-            data = json.load(f)
-            
-        data["garden_grid"]["max_pumps"] = body_json.get("max_pumps", data["garden_grid"]["max_pumps"])
-        data["garden_grid"]["max_taps"] = body_json.get("max_taps", data["garden_grid"]["max_taps"])
-        
-        with open("catalogManager.json", "w") as f:
-            json.dump(data, f, indent=4)
-            
-        return json.dumps({"result": "Grid updated", "garden_grid": data["garden_grid"]}, indent=4)
 
-class CatalogRoot: #empty class which contains all the endpoints
-    pass                     
-               
+# ─────────────────────────────────────────────────────────────────────────────
+# Server bootstrap
+# ─────────────────────────────────────────────────────────────────────────────
 
-        
+class CatalogRoot:
+    pass
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     root = CatalogRoot()
+    root.broker     = BrokerEndpoint()
+    root.price      = PriceEndpoint()
+    root.gardens    = GardensEndpoint()
+    root.users      = UsersEndpoint()
+    root.strategies = StrategiesEndpoint()
+    root.services   = ServicesEndpoint()
+    root.location   = LocationEndpoint()
 
-    root.broker = BrokerEndpoint()          
-    root.price = PriceEndpoint()            
-    root.slots = SlotsEndpoint()            
-    root.devices = DevicesEndpoint()        
-    root.services = ServicesEndpoint()      
-    root.users = UsersEndpoint()            
-    root.strategies = StrategiesEndpoint()  
-    root.location = LocationEndpoint()
-    root.grid = GridEndpoint()
-
-
-
-    conf={
-        #Standard configuration to serve the url "localhost:8080"
-        '/':{
-            'request.dispatch':cherrypy.dispatch.MethodDispatcher(),
-            'tools.sessions.on':True
+    conf = {
+        '/': {
+            'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
+            'tools.sessions.on': True
         }
     }
     cherrypy.config.update({
         'server.socket_host': '0.0.0.0',
         'server.socket_port': 8080
     })
-
-    cherrypy.tree.mount(root,'/',conf)
+    cherrypy.tree.mount(root, '/', conf)
     cherrypy.engine.start()
     cherrypy.engine.block()

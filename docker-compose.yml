@@ -102,9 +102,9 @@ services:
       - ./Telegram_Bot/.env
     environment:
       - BROKER_IP=message-broker
-      - SLOTS_URL=http://service-catalog:8080/slots
       - CATALOG_URL=http://service-catalog:8080
       - STATISTICS_URL=http://statistics-service:8082
+      - INFLUX_ADAPTOR_URL=http://influx-adaptor:8081
     depends_on:
       - message-broker
       - service-catalog
@@ -119,12 +119,14 @@ services:
       - message-broker
     restart: always
 
-  device-connector:
+  # Garden G_001 — RPi_001 manages slots P1_R1, P1_R2, P3_R3
+  device-connector-g001:
     build: ./device_connector
     image: smart-open-air-garden-device-connector
-    container_name: device-connector
+    container_name: device-connector-g001
     environment:
-      - CATALOG_URL=http://service-catalog:8080/broker
+      - CATALOG_URL=http://service-catalog:8080
+      - GARDEN_ID=G_001
       - DEVICE_ID=RPi_001
       - PYTHONUNBUFFERED=1
     depends_on:
@@ -132,26 +134,15 @@ services:
       - service-catalog
     restart: always
 
-  device-connector-02:
+  # Garden G_002 — RPi_009 manages slots P3_R1, P5_R5
+  device-connector-g002:
     build: ./device_connector
     image: smart-open-air-garden-device-connector
-    container_name: device-connector-02
+    container_name: device-connector-g002
     environment:
-      - CATALOG_URL=http://service-catalog:8080/broker
-      - DEVICE_ID=RPi_002
-      - PYTHONUNBUFFERED=1
-    depends_on:
-      - message-broker
-      - service-catalog
-    restart: always
-
-  device-connector-03:
-    build: ./device_connector
-    image: smart-open-air-garden-device-connector
-    container_name: device-connector-03
-    environment:
-      - CATALOG_URL=http://service-catalog:8080/broker
-      - DEVICE_ID=RPi_003
+      - CATALOG_URL=http://service-catalog:8080
+      - GARDEN_ID=G_002
+      - DEVICE_ID=RPi_009
       - PYTHONUNBUFFERED=1
     depends_on:
       - message-broker

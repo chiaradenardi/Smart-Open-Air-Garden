@@ -4,114 +4,117 @@ import random
 import requests
 from MyMQTT import MyMQTT
 
+
 class MultiSensorSim:
     def __init__(self, clientID, broker, port, catalog_url):
-        self.broker = broker
-        self.port = port
+        self.broker      = broker
+        self.port        = port
         self.catalog_url = catalog_url
+        self.clientID    = clientID
+        # key: "gardenID/slotID" → {moisture, pump_active, topic_pub, topic_sub}
         self.devices = {}
-        self.clientID = clientID
-        
-        # 1. get devices from catalog
-        self.get_devices_from_catalog()
-            
+
+        self._load_from_catalog()
         self.client = MyMQTT(clientID, broker, port, self)
 
-    def get_devices_from_catalog(self):
-        """Si collega al Catalogo e scarica tutti i deviceID registrati negli slots"""
+    def _load_from_catalog(self):
+        """Fetch all gardens and their slots from the catalog."""
         try:
-            print(f"[SIM] Recupero dispositivi da: {self.catalog_url}/slots")
-            response = requests.get(f"{self.catalog_url}/slots")
-            if response.status_code == 200:
-                slots_list = response.json()
-                for slot in slots_list:
-                    d_id = slot.get("deviceID")
-                    if d_id and d_id not in self.devices:
-                        self.devices[d_id] = {
-                            "moisture": 80.0,
-                            "pump_active": False,
-                            "topic_pub": f"garden/{d_id}/telemetry",
-                            "topic_sub": f"garden/{d_id}/pump"
-                        }
-                print(f"[SIM] Trovati {len(self.devices)} dispositivi: {list(self.devices.keys())}")
-            else:
-                print(f"[!] Errore Catalogo: {response.status_code}")
+            print(f"[SIM] Fetching gardens from: {self.catalog_url}/gardens")
+            r = requests.get(f"{self.catalog_url}/gardens", timeout=10)
+            r.raise_for_status()
+            gardens = r.json()
+            for garden in gardens:
+                g_id = garden["gardenID"]
+                for slot in garden.get("slots", []):
+                    s_id = slot["slotID"]
+                    key  = f"{g_id}/{s_id}"
+                    self.devices[key] = {
+                        "gardenID":   g_id,
+                        "slotID":     s_id,
+                        "moisture":   80.0,
+                        "pump_active": False,
+                        "topic_pub":  f"garden/{g_id}/{s_id}/telemetry",
+                        "topic_sub":  f"garden/{g_id}/{s_id}/pump"
+                    }
+            print(f"[SIM] Loaded {len(self.devices)} slot(s): {list(self.devices.keys())}")
         except Exception as e:
-            print(f"[!] Impossibile contattare il Catalogo: {e}")
+            print(f"[!] Cannot contact Catalog: {e}")
 
     def startSim(self):
         self.client.start()
-        for d_id in self.devices:
-            self.client.mySubscribe(self.devices[d_id]["topic_sub"])
-            print(f"[SIM] Listening for {d_id} on: {self.devices[d_id]['topic_sub']}")
+        for key, d in self.devices.items():
+            self.client.mySubscribe(d["topic_sub"])
+            print(f"[SIM] Listening on: {d['topic_sub']}")
 
     def stopSim(self):
         self.client.stop()
 
     def notify(self, topic, payload):
-        """Riceve i comandi dal Cervello"""
+        """Receives pump commands: garden/{gardenID}/{slotID}/pump"""
         if isinstance(payload, bytes):
             payload = payload.decode('utf-8')
         msg = json.loads(payload)
         if isinstance(msg, str):
             msg = json.loads(msg)
 
-        # support for SenML array: extract first dictionary if list
+        # SenML list → take first entry
         if isinstance(msg, list) and len(msg) > 0:
             msg = msg[0]
 
-        target_device = topic.split('/')[1]
-        
-        if target_device in self.devices:
-            # check old key 'status' and new key 'v' (SenML)
-            status = msg.get("status")
-            v_value = msg.get("v")
-            
-            # turns on if status is "ON" or if the SenML value is 1
-            if status == "ON" or v_value == 1:
-                self.devices[target_device]["pump_active"] = True
-                print(f"[SIM] {target_device} -> Pump turned ON")
-            elif status == "OFF" or v_value == 0:
-                self.devices[target_device]["pump_active"] = False
-                print(f"[SIM] {target_device} -> Pump turned OFF")
+        parts = topic.split('/')       # ['garden', 'G_001', 'P1_R1', 'pump']
+        if len(parts) < 4:
+            return
+        key = f"{parts[1]}/{parts[2]}"
 
-    def run_cycle(self):
-        # update and publish data of all sensors found
-        timestamp = int(time.time())
-        if not self.devices:
-            print("[SIM] No device to simulate. Check the Catalog.")
+        if key not in self.devices:
             return
 
-        for d_id, data in self.devices.items():
-            if data["pump_active"]:
-                data["moisture"] += round(random.uniform(5.0, 10.0), 1)
-                if data["moisture"] > 100: data["moisture"] = 100.0
+        v_value = msg.get("v")
+        status  = msg.get("status")
+
+        if status == "ON" or v_value == 1:
+            self.devices[key]["pump_active"] = True
+            print(f"[SIM] {key} → Pump ON")
+        elif status == "OFF" or v_value == 0:
+            self.devices[key]["pump_active"] = False
+            print(f"[SIM] {key} → Pump OFF")
+
+    def run_cycle(self):
+        ts = int(time.time())
+        if not self.devices:
+            print("[SIM] No devices to simulate. Check the Catalog.")
+            return
+
+        for key, d in self.devices.items():
+            # Update moisture
+            if d["pump_active"]:
+                d["moisture"] = min(100.0, d["moisture"] + round(random.uniform(5.0, 10.0), 1))
             else:
-                data["moisture"] -= round(random.uniform(0.5, 2.0), 1)
-                if data["moisture"] < 10: data["moisture"] = 10.0
+                d["moisture"] = max(10.0,  d["moisture"] - round(random.uniform(0.5, 2.0), 1))
 
-            temp = round(random.uniform(20.0, 25.0), 2)
+            temp    = round(random.uniform(20.0, 25.0), 2)
             air_hum = round(random.uniform(40.0, 50.0), 1)
-            packet = [
-                {"bn": f"{d_id}/", "n": "temperature", "v": temp, "u": "Cel", "t": timestamp},
-                {"n": "air_humidity", "v": air_hum, "u": "%RH", "t": timestamp},
-                {"n": "soil_moisture", "v": round(data["moisture"], 1), "u": "%RH", "t": timestamp}
-            ]
 
-            self.client.myPublish(data["topic_pub"], packet)
-            print(f"[SIM] {d_id} | Soil Moisture: {round(data['moisture'], 1)}% | Pump: {'ON' if data['pump_active'] else 'OFF'}")
+            packet = [
+                {"bn": f"{d['gardenID']}/{d['slotID']}/", "n": "temperature",  "v": temp,                    "u": "Cel",  "t": ts},
+                {"n": "air_humidity",                                            "v": air_hum,                 "u": "%RH",  "t": ts},
+                {"n": "soil_moisture",                                           "v": round(d["moisture"], 1), "u": "%RH",  "t": ts}
+            ]
+            self.client.myPublish(d["topic_pub"], packet)
+            print(f"[SIM] {key} | Moisture: {round(d['moisture'],1)}% | Pump: {'ON' if d['pump_active'] else 'OFF'}")
+
 
 if __name__ == "__main__":
-    # URL of the catalog (localhost because the script runs outside Docker)
-    CATALOG_URL = "http://localhost:8080" 
-    
-    sim = MultiSensorSim("MultiSim_Dinamico", "localhost", 1883, CATALOG_URL)
+    CATALOG_URL = "http://localhost:8080"
+
+    sim = MultiSensorSim("MultiSim_Garden", "localhost", 1883, CATALOG_URL)
     sim.startSim()
-    
+
     try:
         while True:
             sim.run_cycle()
             print("-" * 50)
-            time.sleep(5) 
+            time.sleep(5)
     except KeyboardInterrupt:
         sim.stopSim()
