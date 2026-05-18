@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import os
 import paho.mqtt.client as mqtt
 import json
+import time
 import threading
 from dotenv import load_dotenv
 
@@ -171,7 +172,7 @@ class StatisticsService:
         try:
             message = {
                 "type": "water_statistics",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": int(time.time()),
                 "liters_saved": statistics["liters_saved"],
                 "savings_percentage": statistics["savings_percentage"],
                 "pump_activations": statistics["pump_activations_smart"]
