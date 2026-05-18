@@ -6,7 +6,9 @@ from MyMQTT import MyMQTT
 
 
 class MultiSensorSim:
+    """This class simulates sensors and pumps for all gardens at once. Useful for testing."""
     def __init__(self, clientID, broker, port, catalog_url):
+        """Loads all the gardens from the catalog and prepares the MQTT client."""
         self.broker      = broker
         self.port        = port
         self.catalog_url = catalog_url
@@ -18,7 +20,7 @@ class MultiSensorSim:
         self.client = MyMQTT(clientID, broker, port, self)
 
     def _load_from_catalog(self):
-        """Fetch all gardens and their slots from the catalog."""
+        """Gets the list of gardens and slots from the catalog so we know what to simulate."""
         try:
             print(f"[SIM] Fetching gardens from: {self.catalog_url}/gardens")
             r = requests.get(f"{self.catalog_url}/gardens", timeout=10)
@@ -42,16 +44,18 @@ class MultiSensorSim:
             print(f"[!] Cannot contact Catalog: {e}")
 
     def startSim(self):
+        """Connects to MQTT and subscribes to the pump topics for each slot."""
         self.client.start()
         for key, d in self.devices.items():
             self.client.mySubscribe(d["topic_sub"])
             print(f"[SIM] Listening on: {d['topic_sub']}")
 
     def stopSim(self):
+        """Disconnects from the broker."""
         self.client.stop()
 
     def notify(self, topic, payload):
-        """Receives pump commands: garden/{gardenID}/{slotID}/pump"""
+        """Handles pump commands: turns the simulated pump ON or OFF for the right slot."""
         if isinstance(payload, bytes):
             payload = payload.decode('utf-8')
         msg = json.loads(payload)
@@ -81,6 +85,7 @@ class MultiSensorSim:
             print(f"[SIM] {key} → Pump OFF")
 
     def run_cycle(self):
+        """Generates fake sensor data for each slot and publishes it to MQTT in SenML format."""
         ts = int(time.time())
         if not self.devices:
             print("[SIM] No devices to simulate. Check the Catalog.")

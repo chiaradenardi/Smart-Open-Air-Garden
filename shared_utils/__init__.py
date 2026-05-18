@@ -1,6 +1,6 @@
 """
-Shared utilities for Smart Open Air Garden services.
-Provides common functionality for data validation, standardized responses, and message handling.
+Shared utilities for the Smart Open Air Garden project.
+Contains helpers for validating data and formatting API responses.
 """
 
 from .validation import (

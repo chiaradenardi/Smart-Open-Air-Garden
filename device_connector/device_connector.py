@@ -7,16 +7,11 @@ import paho.mqtt.client as mqtt
 
 
 class DeviceConnector:
-    """IoT device connector for a single garden.
-    
-    Manages all slots of the assigned garden, simulates sensors for each,
-    and communicates via MQTT using per-slot topics:
-      telemetry: garden/{GARDEN_ID}/{slotID}/telemetry
-      commands:  garden/{GARDEN_ID}/{slotID}/pump
-    """
+    """This class represents the Raspberry Pi in a garden. 
+    It simulates sensor data and listens for pump commands."""
 
     def __init__(self):
-        """Initialize the device connector with configuration from environment."""
+        """Creates the device object and sets default values for sensors and pump."""
         self.catalog_url = os.getenv("CATALOG_URL", "http://service-catalog:8080")
         self.garden_id   = os.getenv("GARDEN_ID",   "G_001")
         self.device_id   = os.getenv("DEVICE_ID",   "RPi_001")
@@ -36,7 +31,7 @@ class DeviceConnector:
     # ── Catalog interactions ──────────────────────────────────────────────────
 
     def get_broker_config(self):
-        """Fetch broker configuration from the Service Catalog."""
+        """Asks the catalog where the MQTT broker is located."""
         print("[INIT] Requesting broker config from Catalog")
         try:
             r = requests.get(f"{self.catalog_url}/broker", timeout=10)
@@ -49,7 +44,7 @@ class DeviceConnector:
             return None
 
     def get_garden_slots(self):
-        """Fetch the list of slots for this garden from the Service Catalog."""
+        """Downloads the list of active slots for this specific garden from the catalog."""
         try:
             r = requests.get(
                 f"{self.catalog_url}/gardens/{self.garden_id}/slots",
@@ -66,7 +61,7 @@ class DeviceConnector:
     # ── Sensor simulation ─────────────────────────────────────────────────────
 
     def simulate_sensors(self, slot_id: str):
-        """Simulate DHT11 and soil moisture sensor readings for a given slot."""
+        """Creates fake temperature and humidity data. If the pump is ON, moisture goes up."""
         temp         = round(random.uniform(20.0, 24.0), 1)
         air_humidity = round(random.uniform(40.0, 50.0), 1)
 
@@ -82,7 +77,7 @@ class DeviceConnector:
     # ── MQTT setup ────────────────────────────────────────────────────────────
 
     def _on_connect(self, client, userdata, flags, rc):
-        """MQTT connection callback — subscribes to pump command topics."""
+        """When connected to MQTT, it subscribes to the pump topics for all slots."""
         if rc == 0:
             print("[MQTT] Connection established with broker")
             for slot in self.slots:
@@ -93,7 +88,7 @@ class DeviceConnector:
             print(f"[MQTT] Connection failed with error code: {rc}")
 
     def _on_message(self, client, userdata, msg):
-        """MQTT message callback — updates pump state based on received commands."""
+        """Reads incoming MQTT messages and turns the simulated pump ON or OFF."""
         payload_str = msg.payload.decode('utf-8')
         parts = msg.topic.split('/')   # garden / G_001 / P1_R1 / pump
         if len(parts) < 4:
@@ -117,13 +112,13 @@ class DeviceConnector:
             print(f"[ERROR] Failed to parse payload: {e}")
 
     def setup_mqtt(self):
-        """Initialize and configure the MQTT client."""
+        """Prepares the MQTT client with ID and callbacks."""
         self.client = mqtt.Client(client_id=self.client_id)
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
 
     def connect_mqtt(self):
-        """Connect to the MQTT broker with retry logic."""
+        """Tries to connect to the broker, and keeps retrying if it fails."""
         print(f"[SETUP] Connecting to broker at {self.broker_ip} as {self.client_id}")
         while True:
             try:
@@ -136,7 +131,7 @@ class DeviceConnector:
     # ── Telemetry publishing ──────────────────────────────────────────────────
 
     def publish_telemetry(self):
-        """Publish sensor readings for all slots to the broker in SenML format."""
+        """Sends the generated sensor data to MQTT using SenML format."""
         ts = int(time.time())
         for slot in self.slots:
             s_id = slot["slotID"]
@@ -154,7 +149,7 @@ class DeviceConnector:
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     def start(self):
-        """Start the device connector: fetch config, connect MQTT, publish telemetry."""
+        """Main function: gets config, connects to MQTT, and loops to send data every 5 seconds."""
         # 1. Wait for broker config
         broker_cfg = None
         while not broker_cfg:
@@ -191,7 +186,7 @@ class DeviceConnector:
             self.stop()
 
     def stop(self):
-        """Stop the device connector gracefully."""
+        """Safely stops the MQTT loop and disconnects."""
         if self.client:
             self.client.loop_stop()
             self.client.disconnect()

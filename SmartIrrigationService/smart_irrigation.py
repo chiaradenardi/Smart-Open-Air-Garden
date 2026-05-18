@@ -5,7 +5,9 @@ from MyMQTT import MyMQTT
 
 
 class SmartIrrigation:
+    """This is the brain of the system. It decides when to turn the pump on or off based on moisture and weather."""
     def __init__(self, clientID, broker, port, catalog_url):
+        """Initializes the irrigation logic and connects to the MQTT broker."""
         self.client      = MyMQTT(clientID, broker, port, self)
         self.catalog_url = catalog_url
         # key: "gardenID/slotID" → bool (pump on?)
@@ -19,6 +21,7 @@ class SmartIrrigation:
         self.topic_sub = "garden/+/+/telemetry"
 
     def start(self):
+        """Starts the MQTT connection and subscribes to telemetry messages."""
         self.client.start()
         self.client.mySubscribe(self.topic_sub)
         print("--- Smart Irrigation multi-garden started ---")
@@ -26,6 +29,7 @@ class SmartIrrigation:
         print(f"Weather: {self.weather_adaptor_url}")
 
     def notify(self, topic, payload):
+        """Receives sensor data. Checks if moisture is too low, checks the weather, and turns the pump on or off."""
         try:
             if isinstance(payload, bytes):
                 payload = payload.decode('utf-8')

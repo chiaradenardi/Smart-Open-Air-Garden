@@ -1,10 +1,10 @@
 """
-Statistics & Analytics Service - Chiara
-Calcola il risparmio idrico e ricostruisce lo storico della pompa.
-Con MQTT integration per Telegram Bot.
+Statistics & Analytics Service
+Calculates how much water we save and tracks the pump history.
+It also connects to MQTT to send this data to the Telegram Bot.
 """
 
-from flask import Flask, jsonify, request
+import cherrypy
 import requests
 import logging
 from datetime import datetime, timedelta
@@ -24,10 +24,10 @@ load_dotenv()
 
 
 class MQTTConnection:
-    """Manages MQTT connection and callbacks."""
+    """This class helps the statistics service talk to the MQTT broker."""
     
     def __init__(self, broker_ip, broker_port):
-        """Initialize MQTT connection."""
+        """Prepares the MQTT client with the broker address."""
         self.broker_ip = broker_ip
         self.broker_port = broker_port
         self.client = mqtt.Client("statistics-service")
@@ -35,19 +35,19 @@ class MQTTConnection:
         self.client.on_disconnect = self._on_disconnect
     
     def _on_connect(self, client, userdata, flags, rc):
-        """Handle MQTT connection."""
+        """Checks if the connection was successful and prints a message."""
         if rc == 0:
             logger.info("✅ Connected to MQTT Broker")
         else:
             logger.error(f"❌ MQTT Error: {rc}")
     
     def _on_disconnect(self, client, userdata, rc):
-        """Handle MQTT disconnection."""
+        """Prints a warning if the connection drops."""
         if rc != 0:
             logger.warning(f"⚠️ Unexpected MQTT disconnection: {rc}")
     
     def connect(self):
-        """Connect to broker in background."""
+        """Tries to connect to the broker and starts the background loop."""
         try:
             self.client.connect(self.broker_ip, self.broker_port, keepalive=60)
             self.client.loop_start()
@@ -56,19 +56,19 @@ class MQTTConnection:
             logger.warning(f"⚠️ MQTT not available: {e}")
     
     def publish(self, topic, message, qos=1):
-        """Publish message to MQTT topic."""
+        """Sends a message to a specific topic."""
         try:
             self.client.publish(topic, message, qos=qos)
         except Exception as e:
             logger.warning(f"⚠️ Error publishing on MQTT: {e}")
     
     def is_connected(self):
-        """Check if MQTT client is connected."""
+        """Returns True if the client is currently connected to the broker."""
         return self.client.is_connected()
 
 
 class StatisticsService:
-    """Service for calculating and reporting water savings statistics."""
+    """This class calculates how many liters of water and money we saved."""
     
     # Constants
     MINUTES_PER_PUMP = 5
@@ -77,14 +77,14 @@ class StatisticsService:
     DEFAULT_PRICE_PER_LITER = 0.004
     
     def __init__(self, influx_url, broker_ip, broker_port, catalog_url):
-        """Initialize the statistics service."""
+        """Saves the URLs and starts the MQTT connection."""
         self.influx_url = influx_url
         self.catalog_url = catalog_url
         self.mqtt = MQTTConnection(broker_ip, broker_port)
         self.mqtt.connect()
     
-    def get_price_per_liter(self) -> float:
-        """Fetch the current water price from the Service Catalog."""
+    def get_price_per_liter(self):
+        """Gets the water price from the catalog so we can calculate the money saved."""
         try:
             response = requests.get(f"{self.catalog_url}/price", timeout=3)
             response.raise_for_status()
@@ -96,8 +96,8 @@ class StatisticsService:
             logger.warning(f"⚠️ Could not fetch price from Catalog: {e}. Using default: {self.DEFAULT_PRICE_PER_LITER} €/L")
             return self.DEFAULT_PRICE_PER_LITER
     
-    def get_pump_history(self, period: str = "7d") -> list:
-        """Retrieve pump history from InfluxDB Adaptor via REST."""
+    def get_pump_history(self, period: str = "7d"):
+        """Asks the InfluxDB database for the history of the pump."""
         try:
             logger.info(f"📊 Retrieving pump history for period: {period}")
             
@@ -124,8 +124,8 @@ class StatisticsService:
                 for i in range(5)
             ]
     
-    def calculate_water_savings(self, pump_history: list) -> dict:
-        """Calculate water savings and economic savings."""
+    def calculate_water_savings(self, pump_history: list):
+        """Does the math to find out how much water we saved compared to a normal timer."""
         pump_activations_smart = sum(1 for dato in pump_history if dato.get("value") == 1)
         
         minutes_used_smart = pump_activations_smart * self.MINUTES_PER_PUMP
@@ -153,8 +153,8 @@ class StatisticsService:
             "cost_per_liter": price_per_liter
         }
     
-    def build_full_report(self, period: str = "7d") -> dict:
-        """Build the complete report."""
+    def build_full_report(self, period: str = "7d"):
+        """Creates a big dictionary with all the stats and the raw data."""
         pump_history = self.get_pump_history(period)
         statistics = self.calculate_water_savings(pump_history)
         
@@ -168,7 +168,7 @@ class StatisticsService:
         }
     
     def publish_statistics(self, statistics: dict):
-        """Publish statistics to MQTT for the Telegram Bot."""
+        """Sends the final stats to the Telegram bot using MQTT."""
         try:
             message = {
                 "type": "water_statistics",
@@ -189,14 +189,12 @@ class StatisticsService:
         except Exception as e:
             logger.warning(f"⚠️ Error publishing on MQTT: {e}")
     
-    def get_mqtt_status(self) -> bool:
-        """Get MQTT connection status."""
+    def get_mqtt_status(self):
+        """Returns if the MQTT is working, useful for the health check."""
         return self.mqtt.is_connected()
 
 
-# ==================== FLASK APP SETUP ====================
-
-app = Flask(__name__)
+# ==================== CHERRYPY APP SETUP ====================
 
 # Configuration
 INFLUX_ADAPTOR_URL = os.getenv("INFLUX_ADAPTOR_URL", "http://influx-adaptor:8081")
@@ -212,91 +210,72 @@ statistics_service = StatisticsService(
     CATALOG_URL
 )
 
-
 # ==================== API REST ENDPOINTS ====================
 
-@app.route('/api/water-saved', methods=['GET'])
-def get_water_saved():
-    """Main endpoint - Returns the water savings."""
-    period = request.args.get('period', '15m')
-    
-    logger.info(f"📈 Dashboard request: calculating savings for {period}")
-    
-    try:
-        report = statistics_service.build_full_report(period)
-        
-        # Publish to MQTT for Telegram
-        statistics_service.publish_statistics(report["statistics"])
-        
-        return jsonify(report), 200
-    
-    except Exception as e:
-        logger.error(f"❌ Error in calculation: {e}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
+class WaterSavedEndpoint:
+    """This web endpoint returns the water savings report."""
+    exposed = True
+    def GET(self, period='15m', **kwargs):
+        """Handles GET requests to calculate savings."""
+        logger.info(f"📈 Dashboard request: calculating savings for {period}")
+        try:
+            report = statistics_service.build_full_report(period)
+            statistics_service.publish_statistics(report["statistics"])
+            return json.dumps(report).encode('utf-8')
+        except Exception as e:
+            logger.error(f"❌ Error in calculation: {e}")
+            cherrypy.response.status = 500
+            return json.dumps({"status": "error", "message": str(e)}).encode('utf-8')
 
+class PumpHistoryEndpoint:
+    """This web endpoint returns just the raw pump history data."""
+    exposed = True
+    def GET(self, period='15m', **kwargs):
+        """Handles GET requests for history."""
+        try:
+            history = statistics_service.get_pump_history(period)
+            return json.dumps({
+                "status": "success",
+                "period": period,
+                "records": len(history),
+                "data": history
+            }).encode('utf-8')
+        except Exception as e:
+            logger.error(f"❌ Error in pump history retrieval: {e}")
+            cherrypy.response.status = 500
+            return json.dumps({"status": "error", "message": str(e)}).encode('utf-8')
 
-@app.route('/api/pump-history', methods=['GET'])
-def get_pump_history_endpoint():
-    """Endpoint to retrieve the raw pump history."""
-    period = request.args.get('period', '15m')
-    
-    try:
-        history = statistics_service.get_pump_history(period)
-        return jsonify({
-            "status": "success",
-            "period": period,
-            "records": len(history),
-            "data": history
-        }), 200
-    
-    except Exception as e:
-        logger.error(f"❌ Error in pump history retrieval: {e}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
+class StatisticsEndpoint:
+    """This web endpoint returns just the calculated statistics."""
+    exposed = True
+    def GET(self, period='15m', **kwargs):
+        """Handles GET requests for statistics."""
+        try:
+            pump_history = statistics_service.get_pump_history(period)
+            statistics = statistics_service.calculate_water_savings(pump_history)
+            statistics_service.publish_statistics(statistics)
+            return json.dumps({
+                "status": "success",
+                "timestamp": datetime.now().isoformat(),
+                "period": period,
+                "statistics": statistics
+            }).encode('utf-8')
+        except Exception as e:
+            logger.error(f"❌ Error in statistics calculation: {e}")
+            cherrypy.response.status = 500
+            return json.dumps({"status": "error", "message": str(e)}).encode('utf-8')
 
-
-@app.route('/api/statistics', methods=['GET'])
-def get_statistics():
-    """Endpoint to retrieve only the calculated statistics."""
-    period = request.args.get('period', '15m')
-    
-    try:
-        pump_history = statistics_service.get_pump_history(period)
-        statistics = statistics_service.calculate_water_savings(pump_history)
-        
-        # Publish to MQTT for Telegram
-        statistics_service.publish_statistics(statistics)
-        
-        return jsonify({
-            "status": "success",
+class HealthEndpoint:
+    """This web endpoint is used to check if the service is alive and working."""
+    exposed = True
+    def GET(self, **kwargs):
+        """Returns a simple JSON saying everything is OK."""
+        return json.dumps({
+            "service": "statistics-service",
+            "status": "running",
             "timestamp": datetime.now().isoformat(),
-            "period": period,
-            "statistics": statistics
-        }), 200
-    
-    except Exception as e:
-        logger.error(f"❌ Error in statistics calculation: {e}")
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-
-
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check to verify that the service is active."""
-    return jsonify({
-        "service": "statistics-service",
-        "status": "running",
-        "timestamp": datetime.now().isoformat(),
-        "mqtt_connected": statistics_service.get_mqtt_status()
-    }), 200
-
+            "mqtt_connected": statistics_service.get_mqtt_status()
+        }).encode('utf-8')
 
 # ==================== MAIN ====================
 
@@ -304,5 +283,24 @@ if __name__ == '__main__':
     logger.info("🚀 Statistics Service started")
     logger.info(f"📡 InfluxDB Adaptor: {INFLUX_ADAPTOR_URL}")
     
-    # Start Flask
-    app.run(host='0.0.0.0', port=8082, debug=False)
+    conf = {
+        '/': {
+            'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
+            'tools.sessions.on': True,
+            'tools.response_headers.on': True,
+            'tools.response_headers.headers': [('Content-Type', 'application/json')]
+        }
+    }
+    
+    cherrypy.tree.mount(WaterSavedEndpoint(), '/api/water-saved', conf)
+    cherrypy.tree.mount(PumpHistoryEndpoint(), '/api/pump-history', conf)
+    cherrypy.tree.mount(StatisticsEndpoint(), '/api/statistics', conf)
+    cherrypy.tree.mount(HealthEndpoint(), '/health', conf)
+    
+    cherrypy.config.update({
+        'server.socket_host': '0.0.0.0',
+        'server.socket_port': 8082
+    })
+    
+    cherrypy.engine.start()
+    cherrypy.engine.block()

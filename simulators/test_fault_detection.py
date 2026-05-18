@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 """
-Test Script: Telegram Bot Integration + Fault Detection Service
-====================================================================
-Tests the complete flow:
-1. Turns on a pump (publishes to garden/RPi_test/pump)
-2. Sends stagnant moisture data (publishes to garden/RPi_test/telemetry)
-3. Waits for Fault Detection to detect the fault
-4. Verifies that the Telegram Bot receives the alarm on garden/alerts/faults
+Test script for the Fault Detection Service.
+It fakes a broken pump scenario and checks if the alarm is triggered correctly.
+Steps: turn pump ON, send flat moisture data, wait for the alarm to come in.
 """
 
 import paho.mqtt.client as mqtt
@@ -30,7 +26,7 @@ alarms_received = []
 
 # ============ CALLBACK MQTT ============
 def on_connect(client, userdata, flags, rc):
-    """Connection to the broker"""
+    """When connected, subscribe to the alarm topic to see if the fault is detected."""
     if rc == 0:
         print(f"✅ [TEST] Connected to broker {BROKER_IP}:{BROKER_PORT}")
         # Subscribe to alarms to receive notifications
@@ -40,7 +36,7 @@ def on_connect(client, userdata, flags, rc):
         print(f"❌ Connection error: {rc}")
 
 def on_message(client, userdata, msg):
-    """Receive MQTT messages"""
+    """Saves any received alarm message to check later if the test passed."""
     try:
         payload = msg.payload.decode('utf-8')
         print(f"\n🔔 [ALARM RECEIVED] Topic: {msg.topic}")
@@ -54,7 +50,7 @@ def on_message(client, userdata, msg):
         print(f"❌ Error parsing message: {e}")
 
 def on_disconnect(client, userdata, rc):
-    """Disconnection"""
+    """Prints a message when we disconnect from the broker."""
     if rc != 0:
         print(f"⚠️  Disconnection inattesa: {rc}")
     else:
@@ -62,7 +58,7 @@ def on_disconnect(client, userdata, rc):
 
 # ============ FUNZIONI DI TEST ============
 def publish_message(client, topic, payload, delay=0):
-    """Publish an MQTT message"""
+    """Publishes a JSON message to a topic, with an optional delay before sending."""
     if delay > 0:
         time.sleep(delay)
     client.publish(topic, json.dumps(payload), qos=1)
@@ -70,7 +66,7 @@ def publish_message(client, topic, payload, delay=0):
     print(f"   Payload: {json.dumps(payload)}")
 
 def test_fault_detection(client):
-    """Executes the complete test"""
+    """Runs the full test: turns the pump on, sends flat moisture, and waits for an alarm."""
     
     print("\n" + "="*70)
     print("🚀 TEST START: Telegram Bot Integration + Fault Detection")

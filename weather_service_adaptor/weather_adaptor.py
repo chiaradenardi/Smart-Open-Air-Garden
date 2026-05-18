@@ -5,13 +5,16 @@ import os
 import time 
 
 class WeatherAdaptor:
+    """This class asks Tomorrow.io for the weather forecast to check if it will rain soon."""
     exposed = True
     def __init__(self):
+        """Sets up a cache so we don't ask the weather API too often and get blocked."""
         self.cached_result = None
         self.last_fetch_time = 0
         self.cache_ttl = 900  # 900 seconds = 15 minutes validity
 
     def GET(self, *uri, **params):
+        """Handles the web request. It returns the expected rain for the next 6 hours."""
         current_time = time.time()
         if self.cached_result and (current_time - self.last_fetch_time) < self.cache_ttl:
             print("[ADAPTOR] Using cached data. No call to Tomorrow.io")

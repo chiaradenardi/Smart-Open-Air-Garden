@@ -1,6 +1,6 @@
 """
-Shared utilities for data validation and standardized responses.
-Provides JSON Schema validation and standardized error/success response formatting.
+Shared helper functions for the project.
+Has tools to check if data is in the right format and to build standard responses.
 """
 
 import json
@@ -12,20 +12,11 @@ from datetime import datetime
 
 
 class StandardizedResponse:
-    """Helper class for creating standardized API responses."""
+    """Helps us build JSON responses that always have the same structure."""
     
     @staticmethod
-    def success(data: Any, message: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Create a standardized success response.
-        
-        Args:
-            data: Response payload (dict, list, string, number, bool)
-            message: Optional human-readable message
-            
-        Returns:
-            Standardized success response dictionary
-        """
+    def success(data, message=None):
+        """Wraps the data in a success response with status 'success'."""
         response = {
             "status": "success",
             "data": data
@@ -35,20 +26,8 @@ class StandardizedResponse:
         return response
     
     @staticmethod
-    def error(code: str, message: str, details: Optional[Dict] = None, 
-              status_code: int = 500) -> Tuple[Dict[str, Any], int]:
-        """
-        Create a standardized error response.
-        
-        Args:
-            code: Error code (e.g., 'VALIDATION_ERROR', 'NOT_FOUND')
-            message: Human-readable error message
-            details: Optional additional error context
-            status_code: HTTP status code
-            
-        Returns:
-            Tuple of (response dictionary, HTTP status code)
-        """
+    def error(code, message, details=None, status_code=500):
+        """Wraps error info in a standard error response with an HTTP code."""
         response = {
             "status": "error",
             "code": code,
@@ -60,29 +39,15 @@ class StandardizedResponse:
 
 
 class SchemaValidator:
-    """Helper class for validating data against JSON schemas."""
+    """Checks if incoming data matches a JSON schema we defined."""
     
-    def __init__(self, logger: Optional[logging.Logger] = None):
-        """
-        Initialize validator with optional logger.
-        
-        Args:
-            logger: Optional logger instance for error logging
-        """
+    def __init__(self, logger=None):
+        """Sets up the validator. You can pass a logger if you want to see errors."""
         self.logger = logger or logging.getLogger(__name__)
         self.schemas = {}
     
-    def load_schema(self, schema_name: str, schema_path: str) -> bool:
-        """
-        Load a JSON schema from file.
-        
-        Args:
-            schema_name: Name to reference the schema by
-            schema_path: Path to the schema JSON file
-            
-        Returns:
-            True if successful, False if loading failed
-        """
+    def load_schema(self, schema_name, schema_path):
+        """Loads a JSON schema file so we can use it to validate data later."""
         try:
             with open(schema_path, 'r') as f:
                 self.schemas[schema_name] = json.load(f)
@@ -92,17 +57,8 @@ class SchemaValidator:
             self.logger.error(f"✗ Failed to load schema {schema_name}: {e}")
             return False
     
-    def validate(self, data: Any, schema_name: str) -> Tuple[bool, Optional[str]]:
-        """
-        Validate data against a loaded schema.
-        
-        Args:
-            data: Data to validate
-            schema_name: Name of the schema to validate against
-            
-        Returns:
-            Tuple of (is_valid, error_message)
-        """
+    def validate(self, data, schema_name):
+        """Checks if the data matches the rules in the schema. Returns True/False and an error message."""
         if schema_name not in self.schemas:
             error_msg = f"Schema '{schema_name}' not loaded"
             self.logger.error(error_msg)
@@ -121,19 +77,8 @@ class SchemaValidator:
             self.logger.error(error_msg)
             return False, error_msg
     
-    def validate_and_respond(self, data: Any, schema_name: str) -> Tuple[bool, Any]:
-        """
-        Validate data and return standardized response.
-        
-        Args:
-            data: Data to validate
-            schema_name: Name of the schema to validate against
-            
-        Returns:
-            Tuple of (is_valid, response_dict_or_error_tuple)
-            If valid: (True, None)
-            If invalid: (False, (error_response_dict, 400))
-        """
+    def validate_and_respond(self, data, schema_name):
+        """Validates data and returns a ready-to-send error response if something is wrong."""
         is_valid, error_msg = self.validate(data, schema_name)
         
         if not is_valid:
@@ -149,23 +94,15 @@ class SchemaValidator:
 
 
 class MessageValidator:
-    """Specific validator for MQTT and other system messages."""
+    """Checks if MQTT messages have the right fields and values."""
     
-    def __init__(self, logger: Optional[logging.Logger] = None):
-        """Initialize message validator."""
+    def __init__(self, logger=None):
+        """Sets up the validator."""
         self.logger = logger or logging.getLogger(__name__)
     
     @staticmethod
-    def validate_senml_message(data: Any) -> Tuple[bool, Optional[str]]:
-        """
-        Validate SenML format message.
-        
-        Args:
-            data: Message data to validate
-            
-        Returns:
-            Tuple of (is_valid, error_message)
-        """
+    def validate_senml_message(data):
+        """Makes sure a SenML message is a valid list with the right fields (n, v, t)."""
         try:
             # Must be a list (array)
             if not isinstance(data, list):
@@ -210,16 +147,8 @@ class MessageValidator:
             return False, f"Unexpected validation error: {str(e)}"
     
     @staticmethod
-    def validate_fault_alert(data: Any) -> Tuple[bool, Optional[str]]:
-        """
-        Validate fault alert message format.
-        
-        Args:
-            data: Message data to validate
-            
-        Returns:
-            Tuple of (is_valid, error_message)
-        """
+    def validate_fault_alert(data):
+        """Makes sure a fault alert has all required fields like error type and moisture values."""
         try:
             if not isinstance(data, dict):
                 return False, "Fault alert must be a JSON object"
@@ -254,49 +183,21 @@ class MessageValidator:
 
 
 class ResponseFormatter:
-    """Helper for formatting various response types."""
+    """Shortcuts to quickly format success or error responses."""
     
     @staticmethod
-    def format_error_response(code: str, message: str, details: Optional[Dict] = None) -> Dict[str, Any]:
-        """
-        Format a standardized error response.
-        
-        Args:
-            code: Error code
-            message: Error message
-            details: Optional details dict
-            
-        Returns:
-            Formatted error response
-        """
+    def format_error_response(code, message, details=None):
+        """Builds a standard error response dictionary."""
         return StandardizedResponse.error(code, message, details)[0]
     
     @staticmethod
-    def format_success_response(data: Any, message: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Format a standardized success response.
-        
-        Args:
-            data: Response data
-            message: Optional message
-            
-        Returns:
-            Formatted success response
-        """
+    def format_success_response(data, message=None):
+        """Builds a standard success response dictionary."""
         return StandardizedResponse.success(data, message)
     
     @staticmethod
-    def format_list_response(items: list, message: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Format a list response with optional count message.
-        
-        Args:
-            items: List of items
-            message: Optional message (auto-generated if not provided)
-            
-        Returns:
-            Formatted response
-        """
+    def format_list_response(items, message=None):
+        """Builds a response for a list of items, adding a count message automatically."""
         if not message and items:
             count = len(items)
             item_word = "item" if count == 1 else "items"
@@ -305,29 +206,13 @@ class ResponseFormatter:
         return StandardizedResponse.success(items, message)
 
 
-def validate_http_status(status_code: int) -> bool:
-    """
-    Validate that HTTP status code is appropriate.
-    
-    Args:
-        status_code: HTTP status code
-        
-    Returns:
-        True if status code is valid
-    """
+def validate_http_status(status_code):
+    """Checks if the given HTTP status code is a valid one (between 100 and 599)."""
     return 100 <= status_code <= 599
 
 
-def get_error_status_code(error_code: str) -> int:
-    """
-    Get appropriate HTTP status code for error code.
-    
-    Args:
-        error_code: Error code string
-        
-    Returns:
-        HTTP status code
-    """
+def get_error_status_code(error_code):
+    """Returns the right HTTP code for a given error type (like 404 for NOT_FOUND)."""
     error_status_map = {
         "VALIDATION_ERROR": 400,
         "INVALID_OPERATION": 400,
