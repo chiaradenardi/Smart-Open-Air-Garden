@@ -1,10 +1,11 @@
 import time
 import json
+import os
 from datetime import datetime
 from MyMQTT import MyMQTT
 
-BROKER_IP   = "message-broker"
-BROKER_PORT = 1883
+BROKER_IP   = os.getenv("BROKER_IP",   "message-broker")
+BROKER_PORT = int(os.getenv("BROKER_PORT", "1883"))
 SERVICE_ID  = "FaultDetectionService"
 
 PUMP_TOPIC  = "garden/+/+/pump"

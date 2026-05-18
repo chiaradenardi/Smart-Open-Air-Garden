@@ -6,9 +6,8 @@ RPi.GPIO==0.7.0
 Adafruit-DHT==1.2.3
 
 #for telegram bot
-telebot==12.7.0
 pyTelegramBotAPI==4.14.0
 python-dotenv==1.0.0
 
 #for statistics service
-Flask==3.0.0
+cherrypy
