@@ -229,8 +229,21 @@ def process_create_garden(message):
         if len(parts) != 2:
             bot.send_message(message.chat.id, "❌ Format: `Garden ID, Name`"); return
         garden_id, garden_name = parts
+        
+        # Automatically lookup creator's userID in the catalog
+        owner_ids = []
+        try:
+            users_res = requests.get(f"{CATALOG_REST_URL}/users", timeout=5)
+            if users_res.status_code == 200:
+                for u in users_res.json():
+                    if u.get("telegramChatID") == str(message.chat.id):
+                        owner_ids.append(u.get("userID"))
+                        break
+        except Exception:
+            pass
+
         payload = {"gardenID": garden_id, "gardenName": garden_name,
-                   "grid": {"max_pumps": 4, "max_taps": 4}, "ownerIDs": []}
+                   "grid": {"max_pumps": 4, "max_taps": 4}, "ownerIDs": owner_ids}
         r = requests.post(f"{CATALOG_REST_URL}/gardens", json=payload, timeout=5)
         r.raise_for_status()
         d = r.json()
