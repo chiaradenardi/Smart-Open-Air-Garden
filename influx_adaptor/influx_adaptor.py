@@ -77,9 +77,10 @@ class InfluxDBAdaptor:
                 record = {
                     "measurement": measurement,
                     "tags": {
-                        "garden_id":   garden_id,
-                        "slot_id":     slot_id,
-                        "sensor_type": entry["n"]
+                        "garden_id":      garden_id,
+                        "slot_id":        slot_id,
+                        "garden_slot_id": f"{garden_id}/{slot_id}",
+                        "sensor_type":    entry["n"]
                     },
                     "fields": {"value": float(entry["v"])},
                     "time":   int(entry.get("t", time.time()))
@@ -138,11 +139,12 @@ from(bucket: "{self.influx_bucket}")
             for table in tables:
                 for row in table.records:
                     output.append({
-                        "time":      row.get_time().isoformat(),
-                        "value":     row.get_value(),
-                        "garden_id": row.values.get("garden_id"),
-                        "slot_id":   row.values.get("slot_id"),
-                        "sensor":    row.values.get("sensor_type")
+                        "time":           row.get_time().isoformat(),
+                        "value":          row.get_value(),
+                        "garden_id":      row.values.get("garden_id"),
+                        "slot_id":        row.values.get("slot_id"),
+                        "garden_slot_id": row.values.get("garden_slot_id"),
+                        "sensor":         row.values.get("sensor_type")
                     })
             cherrypy.response.headers['Content-Type'] = 'application/json'
             return json.dumps(output).encode('utf-8')
