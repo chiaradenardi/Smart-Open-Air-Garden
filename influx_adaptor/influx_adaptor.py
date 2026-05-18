@@ -3,9 +3,8 @@ import requests
 import time
 import os
 from MyMQTT import MyMQTT
-from influxdb_client import InfluxDBClient
+from influxdb_client import InfluxDBClient, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
-from influxdb_client.domain.write_precision import WritePrecision
 import cherrypy
 
 
@@ -17,7 +16,7 @@ class InfluxDBAdaptor:
         self.influx_url    = os.getenv("INFLUX_URL",    "http://influxdb:8086")
         self.influx_token  = os.getenv("INFLUX_TOKEN",  "u66UJ0P2mY0WxolaK1-dqhn6Kl70Q1LDuMcsL_28Jej0FnUoiH31VHzpz6O73Z2gNqfakdWYPhOoSd1aVNKdAA==")
         self.influx_org    = os.getenv("INFLUX_ORG",    "e5fa79d45d607722")
-        self.influx_bucket = os.getenv("INFLUX_BUCKET", "telemetry_data")
+        self.influx_bucket = os.getenv("INFLUX_BUCKET", "garden_metrics")
 
         self.db_client  = InfluxDBClient(url=self.influx_url, token=self.influx_token, org=self.influx_org)
         self.write_api  = self.db_client.write_api(write_options=SYNCHRONOUS)
