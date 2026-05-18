@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Weather Service Response",
+  "description": "Weather forecast data for irrigation decision-making",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["success", "error"],
+      "description": "Response status"
+    },
+    "location": {
+      "type": "string",
+      "description": "Geographic location of weather data (e.g., 'Turin,IT')"
+    },
+    "max_precipitation_probability_6h": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Maximum precipitation probability in next 6 hours (%)"
+    },
+    "total_rain_accumulation_6h": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Expected total rainfall in next 6 hours (mm)"
+    },
+    "message": {
+      "type": "string",
+      "description": "Error message (present only when status is 'error')"
+    }
+  },
+  "required": ["status"],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "status": "success",
+      "location": "Turin,IT",
+      "max_precipitation_probability_6h": 30,
+      "total_rain_accumulation_6h": 2.5
+    },
+    {
+      "status": "error",
+      "message": "Error connecting to Tomorrow.io API"
+    }
+  ]
+}

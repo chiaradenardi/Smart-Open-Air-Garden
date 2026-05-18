@@ -1,0 +1,81 @@
+openapi: 3.0.0
+info:
+  title: Smart Open Air Garden - Weather Service API
+  description: Weather forecast adaptor for irrigation decision-making
+  version: 1.0.0
+  contact:
+    name: Smart Open Air Garden Project
+
+servers:
+  - url: http://weather-service-adaptor:8085
+    description: Weather Service Adaptor
+
+tags:
+  - name: Weather
+    description: Weather forecast endpoints
+
+paths:
+  /:
+    get:
+      tags:
+        - Weather
+      summary: Get Weather Forecast
+      description: Retrieve 6-hour weather forecast including precipitation probability and rain accumulation
+      operationId: getWeatherForecast
+      responses:
+        '200':
+          description: Weather forecast retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherResponse'
+        '500':
+          description: Internal server error or external API failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherErrorResponse'
+
+components:
+  schemas:
+    WeatherResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success, error]
+        location:
+          type: string
+          description: Geographic location (e.g., "Turin,IT")
+        max_precipitation_probability_6h:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Maximum precipitation probability in next 6 hours (%)
+        total_rain_accumulation_6h:
+          type: number
+          minimum: 0
+          description: Expected total rainfall in next 6 hours (mm)
+        message:
+          type: string
+          description: Error message (only present when status is 'error')
+      required: [status]
+      example:
+        status: "success"
+        location: "Turin,IT"
+        max_precipitation_probability_6h: 30
+        total_rain_accumulation_6h: 2.5
+
+    WeatherErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error]
+        message:
+          type: string
+          description: Error message
+      required: [status, message]
+      example:
+        status: "error"
+        message: "Error connecting to Tomorrow.io API"
