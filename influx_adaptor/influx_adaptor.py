@@ -9,7 +9,9 @@ import cherrypy
 
 
 class InfluxDBAdaptor:
+    """This class connects MQTT messages to the InfluxDB database to save historical data."""
     def __init__(self, clientID, catalog_url):
+        """Sets up the database connection and the MQTT client."""
         self.clientID    = clientID
         self.catalog_url = catalog_url
 
@@ -25,6 +27,7 @@ class InfluxDBAdaptor:
         self.mqtt_client = MyMQTT(clientID, self.broker_ip, self.broker_port, self)
 
     def _get_broker_config(self):
+        """Asks the catalog to find the MQTT broker address and port."""
         print("[INIT] Contacting Catalog for broker config...")
         try:
             r    = requests.get(self.catalog_url + "/broker", timeout=10)
@@ -38,15 +41,18 @@ class InfluxDBAdaptor:
             return ("message-broker", 1883)
 
     def start(self):
+        """Starts listening to all messages from the garden topic."""
         self.mqtt_client.start()
         self.mqtt_client.mySubscribe("garden/#")
 
     def stop(self):
+        """Stops the MQTT client and closes the database connection."""
         self.mqtt_client.unsubscribe()
         self.mqtt_client.stop()
         self.db_client.close()
 
     def notify(self, topic, payload):
+        """When a message arrives, this function parses it and saves the values into the database."""
         msg_str = payload.decode('utf-8') if isinstance(payload, bytes) else payload
         print(f"[MQTT] {topic}: {msg_str[:80]}")
         try:
@@ -96,14 +102,17 @@ class InfluxDBAdaptor:
 
 
 class InfluxRESTService:
+    """This class provides a REST API to query historical data from the database."""
     exposed = True
 
     def __init__(self, db_client, influx_org, influx_bucket):
+        """Saves the database client info for later queries."""
         self.db_client     = db_client
         self.influx_org    = influx_org
         self.influx_bucket = influx_bucket
 
     def GET(self, *uri, **params):
+        """Handles GET requests to search the database for specific sensors or dates."""
         sensor_type = params.get("sensor_type", "temperature")
         period      = params.get("period", "7d")
         garden_id   = params.get("garden_id", None)

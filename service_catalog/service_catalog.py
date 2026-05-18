@@ -8,15 +8,18 @@ import json
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _load():
+    """Reads the JSON database from the local file."""
     with open("catalogManager.json", "r") as f:
         return json.load(f)
 
 def _save(data):
+    """Saves the modified JSON database back to the local file."""
     data["lastUpdateJSON"] = time.time()
     with open("catalogManager.json", "w") as f:
         json.dump(data, f, indent=4)
 
 def _find_garden(data, garden_id):
+    """Searches the database for a specific garden by its ID."""
     for g in data["gardensList"]:
         if g["gardenID"] == garden_id:
             return g
@@ -28,9 +31,11 @@ def _find_garden(data, garden_id):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class BrokerEndpoint:
+    """This endpoint provides the IP and port of the MQTT broker."""
     exposed = True
 
     def GET(self):
+        """Returns the broker configuration as a JSON string."""
         data = _load()
         b = data["broker"]
         return json.dumps({"broker_name": b["broker_name"], "broker_port": b["port"]}, indent=4)
@@ -41,13 +46,16 @@ class BrokerEndpoint:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class PriceEndpoint:
+    """This endpoint manages the cost of water per cubic meter."""
     exposed = True
 
     def GET(self):
+        """Returns the current water price."""
         data = _load()
         return json.dumps(data["waterPricePerM3"], indent=4)
 
     def PUT(self):
+        """Updates the water price with a new value."""
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         if "NewWaterPricePerM3" not in body:
             return json.dumps({"error": "Missing NewWaterPricePerM3"}, indent=4)
@@ -81,11 +89,13 @@ class PriceEndpoint:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class GardensEndpoint:
+    """This endpoint manages everything about gardens, including their slots and devices."""
     exposed = True
 
     # ── GET ──────────────────────────────────────────────────────────────────
 
     def GET(self, *uri, **params):
+        """Returns data about gardens. You can ask for a list of all gardens or a specific one."""
         data = _load()
 
         # /gardens
@@ -134,6 +144,7 @@ class GardensEndpoint:
     # ── POST ─────────────────────────────────────────────────────────────────
 
     def POST(self, *uri, **params):
+        """Creates a new garden, adds a new slot, or adds a new owner to a garden."""
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         data = _load()
 
@@ -203,6 +214,7 @@ class GardensEndpoint:
     # ── PUT ──────────────────────────────────────────────────────────────────
 
     def PUT(self, *uri, **params):
+        """Updates information about an existing garden, its slots, or its device."""
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         data = _load()
 
@@ -273,6 +285,7 @@ class GardensEndpoint:
     # ── DELETE ───────────────────────────────────────────────────────────────
 
     def DELETE(self, *uri, **params):
+        """Removes a garden, a slot, or an owner from the database."""
         data = _load()
 
         if len(uri) == 0:
@@ -318,9 +331,11 @@ class GardensEndpoint:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class UsersEndpoint:
+    """This endpoint handles user registration and linking Telegram IDs."""
     exposed = True
 
     def GET(self, *uri, **params):
+        """Returns a list of all users or details of a specific user."""
         data = _load()
         if len(uri) > 0:
             for u in data["usersList"]:
@@ -330,6 +345,7 @@ class UsersEndpoint:
         return json.dumps(data["usersList"], indent=4)
 
     def PUT(self, *uri, **params):
+        """Updates a user, usually to add their Telegram Chat ID."""
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         data = _load()
         for u in data["usersList"]:
@@ -340,6 +356,7 @@ class UsersEndpoint:
         return json.dumps({"error": "USER ID NOT FOUND"}, indent=4)
 
     def POST(self):
+        """Registers a new user in the system."""
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         if "userID" not in body or "userName" not in body or "telegramChatID" not in body:
             return json.dumps({"error": "Missing userID, userName or telegramChatID"}, indent=4)
@@ -352,6 +369,7 @@ class UsersEndpoint:
         return json.dumps({"result": "USER successfully added"}, indent=4)
 
     def DELETE(self, *uri, **params):
+        """Deletes a user from the system."""
         data = _load()
         if len(uri) == 0:
             return json.dumps({"error": "Missing USER ID"}, indent=4)
@@ -368,9 +386,11 @@ class UsersEndpoint:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class StrategiesEndpoint:
+    """This endpoint holds the irrigation rules (like moisture thresholds) for different crops."""
     exposed = True
 
     def GET(self, *uri, **params):
+        """Returns the irrigation strategy for all crops or a specific crop."""
         data = _load()
         if len(uri) > 0:
             plant_id = uri[0]
@@ -471,13 +491,16 @@ class ServicesEndpoint:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class LocationEndpoint:
+    """This endpoint stores the GPS location of the garden to fetch correct weather data."""
     exposed = True
 
     def GET(self):
+        """Returns the current garden location."""
         data = _load()
         return json.dumps({"location": data.get("garden_location", "44.6458,10.9257")}, indent=4)
 
     def PUT(self):
+        """Updates the garden location with new coordinates."""
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         if "location" not in body:
             return json.dumps({"error": "Missing location"}, indent=4)

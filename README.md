@@ -1,51 +1,74 @@
-# Smart-Open-Air-Garden
+# Smart Open Air Garden
 
-## 📚 Documentation
+## Documentation
 
-**Complete API and data format documentation is available in the `/docs` directory:**
+Full API and data format docs are in the `/docs` folder:
 
-- **[API & Data Format Documentation](./docs/README.md)** - Quick start guide and overview
-- **[Data Format Specification](./docs/DATA_FORMATS_SPECIFICATION.md)** - Complete data format reference
-- **[MQTT Message Formats](./docs/MQTT_MESSAGE_FORMATS.md)** - MQTT topics, SenML format, and message structure
-- **[REST API Standards](./docs/REST_API_STANDARDS.md)** - HTTP API standards and error handling
-- **[OpenAPI Specifications](./docs/api/)** - Service-specific API documentation
-- **[JSON Schemas](./docs/schemas/)** - Schema definitions for message validation
+- [API & Data Format Overview](./docs/README.md)
+- [Data Format Specification](./docs/DATA_FORMATS_SPECIFICATION.md)
+- [MQTT Message Formats](./docs/MQTT_MESSAGE_FORMATS.md)
+- [REST API Standards](./docs/REST_API_STANDARDS.md)
+- [OpenAPI Specs](./docs/api/) — per-service API docs
+- [JSON Schemas](./docs/schemas/) — schema definitions for validation
 
-## 🔄 Data Flow & Architecture
+## Architecture
 
-### OOP Compliance Status ✅
+The project is built as a set of microservices, each running in its own Docker container. They communicate through MQTT (for sensor data and commands) and REST APIs (for configuration and queries).
 
-All major Python services are implemented with proper object-oriented design:
+### Services
 
-- **DeviceConnector** - IoT device management and telemetry collection
-- **StatisticsService** - Water savings calculation and pump history tracking
-- **TelegramBot** - User notifications via Telegram
-- **SmartIrrigation** - Intelligent irrigation control logic
-- **FaultDetection** - Pump failure and leak detection
-- **InfluxDBAdaptor** - Time-series data persistence
-- **WeatherAdaptor** - Weather forecast integration
+- **DeviceConnector** — Represents a Raspberry Pi in a garden. Reads sensors and controls the pump.
+- **SmartIrrigation** — Decides when to turn the pump on/off based on soil moisture and weather.
+- **FaultDetection** — Watches for broken pumps (pump is ON but moisture doesn't go up).
+- **InfluxDBAdaptor** — Saves all sensor data into InfluxDB for historical queries.
+- **StatisticsService** — Calculates water and money savings compared to a fixed timer.
+- **WeatherAdaptor** — Gets rain forecasts from Tomorrow.io API.
+- **TelegramBot** — Lets users manage gardens, slots, and devices from Telegram.
+- **ServiceCatalog** — Central registry that stores all gardens, devices, users, and settings.
 
-Each service follows:
-- Class-based architecture (no global variables)
-- Proper initialization with dependency injection
-- Encapsulated state management
-- Clear separation of concerns
+### MQTT Topics
 
-### Standardized Data Formats ✅
+All sensor data uses SenML format (RFC 8428).
 
-All communication protocols follow strict standards:
+| Topic | Direction | Description |
+|---|---|---|
+| `garden/{gardenID}/{slotID}/telemetry` | Device -> Cloud | Sensor readings (temp, humidity, moisture) |
+| `garden/{gardenID}/{slotID}/pump` | Cloud -> Device | Pump ON/OFF commands |
+| `garden/alerts/faults` | FaultDetection -> Bot | Pump failure alerts |
+| `garden/statistics/water-saved` | Statistics -> Bot | Water savings updates |
 
-**MQTT Messages**: SenML format (RFC 8428)
-- Telemetry: `garden/{device_id}/telemetry`
-- Commands: `garden/{device_id}/pump`
-- Alerts: `garden/alerts/faults`
+### REST APIs
 
-**REST APIs**: Standardized JSON responses
-- Success envelope: `{status: "success", data: ...}`
-- Error envelope: `{status: "error", code: "...", message: "..."}`
-- HTTP status codes per standard convention
+Each service exposes its own REST API via CherryPy with `MethodDispatcher`.
+Responses follow this format:
 
-**Data Validation**: JSON Schema enforcement
-- All message types defined in `/docs/schemas/`
-- Validation utilities in `/shared_utils/validation.py`
-- Input validation on all service boundaries
+```json
+{"status": "success", "data": { ... }}
+{"status": "error", "code": "NOT_FOUND", "message": "..."}
+```
+
+## How to Run
+
+```bash
+docker-compose up --build -d
+```
+
+This starts all services. The Telegram Bot needs a valid token in `Telegram_Bot/.env`.
+
+## Project Structure
+
+```
+Smart-Open-Air-Garden/
+├── service_catalog/          # Central config and registry
+├── device_connector/         # Raspberry Pi simulator
+├── SmartIrrigationService/   # Irrigation logic
+├── fault-detection-service/  # Pump fault detection
+├── influx_adaptor/           # MQTT -> InfluxDB bridge
+├── statistics-service/       # Water savings calculator
+├── weather_service_adaptor/  # Tomorrow.io weather API
+├── Telegram_Bot/             # User interface via Telegram
+├── simulators/               # Test scripts
+├── shared_utils/             # Shared validation helpers
+├── node_red_data/            # Node-RED dashboard flows
+└── docker-compose.yml
+```

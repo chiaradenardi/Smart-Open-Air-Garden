@@ -1,11 +1,11 @@
 import time
 import json
-import sys
+import os
 from datetime import datetime
 from MyMQTT import MyMQTT
 
-BROKER_IP   = "message-broker"
-BROKER_PORT = 1883
+BROKER_IP   = os.getenv("BROKER_IP",   "message-broker")
+BROKER_PORT = int(os.getenv("BROKER_PORT", "1883"))
 SERVICE_ID  = "FaultDetectionService"
 
 PUMP_TOPIC  = "garden/+/+/pump"
@@ -17,18 +17,23 @@ MOISTURE_MIN_GAP = 0.8
 
 
 class FaultDetection:
+    """This class checks if the pump is working well or if there is a leak."""
+    
     def __init__(self):
+        """Sets up the variables and the MQTT client for this service."""
         self.devices = {}
         self.client  = MyMQTT(SERVICE_ID, BROKER_IP, BROKER_PORT, self)
         self.active  = True
 
     def _key(self, topic):
+        """Extracts the garden and slot names from the MQTT topic to use as a key."""
         parts = topic.split('/')
         if len(parts) < 4:
             return None
         return f"{parts[1]}/{parts[2]}"
 
     def notify(self, topic, payload):
+        """This method is called when a new message arrives from MQTT. It sorts the message."""
         try:
             data = json.loads(payload)
             key  = self._key(topic)
@@ -47,6 +52,7 @@ class FaultDetection:
             print(f"[ERR] {topic}: {e}")
 
     def _process_pump(self, key, msg):
+        """Saves the status of the pump (ON or OFF) and records the start time."""
         status = None
         if isinstance(msg, list):
             for e in msg:
@@ -65,6 +71,7 @@ class FaultDetection:
             print(f"[{key}] Pump stopped.")
 
     def _process_data(self, key, msg):
+        """Reads soil moisture. If the pump is ON but moisture doesn't increase, it raises an alarm."""
         moist = None
         if isinstance(msg, list):
             for e in msg:
@@ -87,6 +94,7 @@ class FaultDetection:
                     dev["is_alarmed"] = True
 
     def _send_alert(self, key, now, before):
+        """Creates an alert message and sends it to the fault topic so the Telegram bot can warn the user."""
         parts = key.split('/')
         alert = {
             "garden_id": parts[0] if len(parts) > 0 else "unknown",
@@ -100,6 +108,7 @@ class FaultDetection:
         print(f"!!! ALERT FOR {key} !!!")
 
     def run(self):
+        """Starts the MQTT client and keeps the program running."""
         self.client.start()
         self.client.mySubscribe(PUMP_TOPIC)
         self.client.mySubscribe(DATA_TOPIC)

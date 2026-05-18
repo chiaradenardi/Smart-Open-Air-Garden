@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
 """
-Test Script: Telegram Bot Integration + Fault Detection Service
-====================================================================
-Tests the complete flow:
-1. Turns on a pump (publishes to garden/RPi_test/pump)
-2. Sends stagnant moisture data (publishes to garden/RPi_test/telemetry)
-3. Waits for Fault Detection to detect the fault
-4. Verifies that the Telegram Bot receives the alarm on garden/alerts/faults
+Test script for the Fault Detection Service.
+It fakes a broken pump scenario and checks if the alarm is triggered correctly.
+Steps: turn pump ON, send flat moisture data, wait for the alarm to come in.
 """
 
 import paho.mqtt.client as mqtt
 import json
 import time
-import threading
 from datetime import datetime
 
 
@@ -30,20 +25,20 @@ alarms_received = []
 
 # ============ CALLBACK MQTT ============
 def on_connect(client, userdata, flags, rc):
-    """Connection to the broker"""
+    """When connected, subscribe to the alarm topic to see if the fault is detected."""
     if rc == 0:
-        print(f"✅ [TEST] Connected to broker {BROKER_IP}:{BROKER_PORT}")
+        print(f"[TEST] Connected to broker {BROKER_IP}:{BROKER_PORT}")
         # Subscribe to alarms to receive notifications
         client.subscribe(TOPIC_ALARMS)
-        print(f"📡 Listening on: {TOPIC_ALARMS}")
+        print(f"[TEST] Listening on: {TOPIC_ALARMS}")
     else:
-        print(f"❌ Connection error: {rc}")
+        print(f"[ERROR] Connection error: {rc}")
 
 def on_message(client, userdata, msg):
-    """Receive MQTT messages"""
+    """Saves any received alarm message to check later if the test passed."""
     try:
         payload = msg.payload.decode('utf-8')
-        print(f"\n🔔 [ALARM RECEIVED] Topic: {msg.topic}")
+        print(f"\n[ALARM RECEIVED] Topic: {msg.topic}")
         print(f"   Payload: {payload}")
         alarms_received.append({
             'topic': msg.topic,
@@ -51,43 +46,43 @@ def on_message(client, userdata, msg):
             'time': datetime.now().isoformat()
         })
     except Exception as e:
-        print(f"❌ Error parsing message: {e}")
+        print(f"[ERROR] Error parsing message: {e}")
 
 def on_disconnect(client, userdata, rc):
-    """Disconnection"""
+    """Prints a message when we disconnect from the broker."""
     if rc != 0:
-        print(f"⚠️  Disconnection inattesa: {rc}")
+        print(f"[WARN] Unexpected disconnection: {rc}")
     else:
-        print(f"✅ Disconnected successfully")
+        print(f"[TEST] Disconnected successfully")
 
 # ============ FUNZIONI DI TEST ============
 def publish_message(client, topic, payload, delay=0):
-    """Publish an MQTT message"""
+    """Publishes a JSON message to a topic, with an optional delay before sending."""
     if delay > 0:
         time.sleep(delay)
     client.publish(topic, json.dumps(payload), qos=1)
-    print(f"📤 Published on {topic}")
+    print(f"[SEND] Published on {topic}")
     print(f"   Payload: {json.dumps(payload)}")
 
 def test_fault_detection(client):
-    """Executes the complete test"""
+    """Runs the full test: turns the pump on, sends flat moisture, and waits for an alarm."""
     
     print("\n" + "="*70)
-    print("🚀 TEST START: Telegram Bot Integration + Fault Detection")
+    print("TEST START: Telegram Bot Integration + Fault Detection")
     print("="*70)
     
     try:
         # ===== STEP 0: ALARM SUBSCRIPTION =====
         print("\n[STEP 0] Subscribing to alarm topics...")
         client.subscribe(TOPIC_ALARMS)
-        print(f"✅ Subscribed to: {TOPIC_ALARMS}")
+        print(f"[OK] Subscribed to: {TOPIC_ALARMS}")
         time.sleep(1)
         
         # ===== STEP 1: TURN ON THE PUMP =====
         print("\n[STEP 1] Turning on the pump...")
         pump_on = [{"n": "pump_status", "v": 1}]
         publish_message(client, TOPIC_PUMP, pump_on, delay=1)
-        print("⏱️  Waiting to record moisture baseline...")
+        print("Waiting to record moisture baseline...")
         time.sleep(2)
         
         # ===== STEP 2: SEND INITIAL MOISTURE DATA =====
@@ -98,7 +93,7 @@ def test_fault_detection(client):
         
         # ===== STEP 3: WAIT FOR PUMP TIMEOUT (15 seconds) AND COLLECT ALARMS =====
         print("\n[STEP 3] Sending telemetry data without moisture increase...")
-        print("⏱️  Fault Detection will wait 15 seconds before triggering alarm...")
+        print("Fault Detection will wait 15 seconds before triggering alarm...")
         
         # Send telemetry for ~35 seconds to collect alarms
         for i in range(7):
@@ -111,22 +106,22 @@ def test_fault_detection(client):
             
             # If alarm received, continue for a few more seconds to collect all
             if len(alarms_received) > 0 and i > 2:
-                print(f"✅ ALARM DETECTED after {elapsed} seconds!")
+                print(f"[OK] ALARM DETECTED after {elapsed} seconds!")
                 break
         
         # ===== RESULT =====
         print("\n" + "="*70)
-        print("📊 TEST RESULTS")
+        print("TEST RESULTS")
         print("="*70)
         
         if len(alarms_received) > 0:
-            print(f"✅ SUCCESS! Alarms received: {len(alarms_received)}")
+            print(f"[PASS] Alarms received: {len(alarms_received)}")
             for i, alarm in enumerate(alarms_received, 1):
                 print(f"\n   [{i}] Time: {alarm['time']}")
                 print(f"       Topic: {alarm['topic']}")
                 print(f"       Payload: {alarm['payload']}")
         else:
-            print("❌ NO ALARMS RECEIVED!")
+            print("[FAIL] NO ALARMS RECEIVED!")
             print("\n   Possible causes:")
             print("   1. Fault Detection Service is not running")
             print("   2. The MQTT broker is unreachable")
@@ -143,7 +138,7 @@ def test_fault_detection(client):
         time.sleep(1)
         
     except Exception as e:
-        print(f"❌ ERROR during the test: {e}")
+        print(f"[ERROR] Test failed: {e}")
         import traceback
         traceback.print_exc()
 
@@ -158,7 +153,7 @@ if __name__ == "__main__":
     
     try:
         # Connect to the broker
-        print(f"🔗 Connection to the broker MQTT in corso ({BROKER_IP}:{BROKER_PORT})...")
+        print(f"[TEST] Connecting to broker ({BROKER_IP}:{BROKER_PORT})...")
         global_client.connect(BROKER_IP, BROKER_PORT, keepalive=60)
         
         # Start the background MQTT loop
@@ -173,19 +168,19 @@ if __name__ == "__main__":
         global_client.loop_stop()
         global_client.disconnect()
         
-        print("\n✅ Test completed!")
+        print("\n[DONE] Test completed!")
         
     except ConnectionRefusedError:
-        print(f"❌ Unable to connect to {BROKER_IP}:{BROKER_PORT}")
+        print(f"[ERROR] Unable to connect to {BROKER_IP}:{BROKER_PORT}")
         print("\n   Solutions:")
         print("   1. Start Docker compose: docker-compose up -d")
         print("   2. If using WSL/Docker Desktop, verify it is active")
         print("   3. If you want to test locally, install Mosquitto")
     except KeyboardInterrupt:
-        print("\n⚠️  Test interrupted by user")
+        print("\n[WARN] Test interrupted by user")
         global_client.loop_stop()
         global_client.disconnect()
     except Exception as e:
-        print(f"❌ Critical error: {e}")
+        print(f"[ERROR] Critical error: {e}")
         import traceback
         traceback.print_exc()

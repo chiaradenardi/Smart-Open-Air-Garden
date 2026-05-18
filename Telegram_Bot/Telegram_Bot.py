@@ -3,7 +3,6 @@ import paho.mqtt.client as mqtt
 import requests
 import json
 import os
-from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,7 +17,7 @@ INFLUX_URL        = os.getenv("INFLUX_ADAPTOR_URL","http://influx-adaptor:8081")
 
 # ── Garden selection state (in-RAM, per chat) ─────────────────────────────────
 # chat_id (str) → gardenID (str)
-chat_garden_map: dict = {}
+chat_garden_map = {}
 
 # ── Pending resize confirmations (in-RAM, per chat) ───────────────────────────
 # chat_id (str) → {"garden_id": str, "max_pumps": int, "max_taps": int, "to_delete": [str]}
@@ -27,13 +26,13 @@ pending_resize: dict = {}
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def gid(chat_id) -> Optional[str]:
-    """Return the active gardenID for this chat, or None."""
+def gid(chat_id):
+    """Finds which garden the user is currently looking at."""
     return chat_garden_map.get(str(chat_id))
 
 
 def active_garden(chat_id):
-    """Return (gardenID, garden_dict) or (None, None)."""
+    """Downloads the full details of the garden the user is looking at."""
     g = gid(chat_id)
     if not g:
         return None, None
@@ -46,8 +45,8 @@ def active_garden(chat_id):
         return None, None
 
 
-def need_garden(message) -> bool:
-    """Send 'select a garden first' prompt. Returns True if OK, False if missing."""
+def need_garden(message):
+    """Checks if the user has chosen a garden. If not, tells them to choose one."""
     if gid(message.chat.id):
         return True
     markup = telebot.types.InlineKeyboardMarkup()
@@ -59,12 +58,14 @@ def need_garden(message) -> bool:
 
 
 def err(message, e):
+    """Sends a quick error message to the user."""
     bot.send_message(message.chat.id, f"❌ Error: {e}")
 
 
 # ── MQTT ──────────────────────────────────────────────────────────────────────
 
 def on_connect(client, userdata, flags, rc):
+    """Subscribes the bot to alarms and pump updates when it connects to MQTT."""
     if rc == 0:
         print("[MQTT] Bot connected to broker")
         client.subscribe("garden/alerts/faults")
@@ -74,6 +75,7 @@ def on_connect(client, userdata, flags, rc):
 
 
 def on_message(client, userdata, msg):
+    """When a new message arrives (like an alarm), the bot forwards it to all users."""
     try:
         raw   = msg.payload.decode('utf-8')
         topic = msg.topic
@@ -119,6 +121,7 @@ def on_message(client, userdata, msg):
 
 @bot.message_handler(commands=['start'])
 def handle_start(message):
+    """Shows the main menu with all the options the user can pick."""
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     markup.add(
         telebot.types.InlineKeyboardButton("🌿 My Gardens",          callback_data="menu_gardens"),
@@ -146,6 +149,7 @@ def handle_start(message):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("menu_"))
 def handle_main_menu(call):
+    """Routes the user to the right function based on which menu button they pressed."""
     bot.answer_callback_query(call.id)
     cmd = call.data.split("_", 1)[1]
     dispatch = {
@@ -168,6 +172,7 @@ def handle_main_menu(call):
 
 @bot.message_handler(commands=['gardens'])
 def handle_gardens(message):
+    """Shows a list of all available gardens so the user can pick one."""
     try:
         gardens = requests.get(f"{CATALOG_REST_URL}/gardens", timeout=5).json()
         markup  = telebot.types.InlineKeyboardMarkup()
@@ -184,6 +189,7 @@ def handle_gardens(message):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("sel_garden_"))
 def handle_select_garden(call):
+    """Sets the tapped garden as the active one for this chat."""
     bot.answer_callback_query(call.id)
     garden_id = call.data.replace("sel_garden_", "")
     chat_id   = str(call.message.chat.id)
@@ -207,6 +213,7 @@ def handle_select_garden(call):
 
 @bot.callback_query_handler(func=lambda c: c.data == "create_garden")
 def handle_create_garden_start(call):
+    """Asks the user to type the new garden info."""
     bot.answer_callback_query(call.id)
     msg = bot.send_message(call.message.chat.id,
         "🌿 *Create New Garden*\n\nEnter the garden details separated by commas:\n"
@@ -216,6 +223,7 @@ def handle_create_garden_start(call):
 
 
 def process_create_garden(message):
+    """Takes the user input and creates a new garden in the catalog."""
     try:
         parts = [x.strip() for x in message.text.split(',')]
         if len(parts) != 2:
@@ -239,6 +247,7 @@ def process_create_garden(message):
 
 @bot.message_handler(commands=['removegarden'])
 def handle_remove_garden(message):
+    """Shows buttons to pick which garden to delete."""
     try:
         gardens = requests.get(f"{CATALOG_REST_URL}/gardens", timeout=5).json()
         markup  = telebot.types.InlineKeyboardMarkup()
@@ -254,6 +263,7 @@ def handle_remove_garden(message):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("del_garden_"))
 def process_del_garden(call):
+    """Deletes the selected garden from the catalog."""
     bot.answer_callback_query(call.id)
     garden_id = call.data.replace("del_garden_", "")
     try:
@@ -275,6 +285,7 @@ def process_del_garden(call):
 
 @bot.message_handler(commands=['status'])
 def handle_status(message):
+    """Shows the live status of each slot, latest moisture, and water savings."""
     if not need_garden(message):
         return
     g_id, garden = active_garden(message.chat.id)
@@ -327,6 +338,7 @@ def handle_status(message):
 
 @bot.message_handler(commands=['crop'])
 def handle_crop(message):
+    """Lets the user pick a slot to change which crop is planted there."""
     if not need_garden(message):
         return
     g_id, garden = active_garden(message.chat.id)
@@ -343,6 +355,7 @@ def handle_crop(message):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("slot_"))
 def handle_slot_selection(call):
+    """After picking a slot, shows the list of available crops to assign."""
     bot.answer_callback_query(call.id)
     # slot_{gardenID}_{slotID}  — slotID may contain underscores
     parts     = call.data.split("_", 2)   # ['slot', gardenID, slotID]
@@ -364,6 +377,7 @@ def handle_slot_selection(call):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("plant_"))
 def handle_crop_selection(call):
+    """Saves the chosen crop to the selected slot in the catalog."""
     # plant_{gardenID}_{slotID}_{plantID}
     parts     = call.data.split("_", 3)
     garden_id = parts[1]
@@ -387,6 +401,7 @@ def handle_crop_selection(call):
 
 @bot.message_handler(commands=['addslot'])
 def handle_add_slot(message):
+    """Asks the user for the slot coordinates and crop to add."""
     if not need_garden(message):
         return
     g_id, garden = active_garden(message.chat.id)
@@ -399,6 +414,7 @@ def handle_add_slot(message):
 
 
 def process_add_slot(message, garden_id):
+    """Takes the input and registers a new slot in the catalog."""
     try:
         parts = [x.strip() for x in message.text.split(',')]
         if len(parts) != 2:
@@ -424,6 +440,7 @@ def process_add_slot(message, garden_id):
 
 @bot.message_handler(commands=['removeslot'])
 def handle_remove_slot(message):
+    """Shows buttons to choose which slot to delete."""
     if not need_garden(message):
         return
     g_id, garden = active_garden(message.chat.id)
@@ -442,6 +459,7 @@ def handle_remove_slot(message):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("del_slot_"))
 def process_del_slot(call):
+    """Deletes the chosen slot from the catalog."""
     bot.answer_callback_query(call.id)
     # del_slot_{gardenID}_{slotID}
     parts     = call.data.split("_", 3)
@@ -464,6 +482,7 @@ def process_del_slot(call):
 
 @bot.message_handler(commands=['price'])
 def handle_price(message):
+    """Shows the current water price and an option to edit it."""
     try:
         price  = requests.get(f"{CATALOG_REST_URL}/price", timeout=5).json()
         markup = telebot.types.InlineKeyboardMarkup()
@@ -477,12 +496,14 @@ def handle_price(message):
 
 @bot.callback_query_handler(func=lambda c: c.data == "edit_price")
 def handle_edit_price(call):
+    """Asks the user to type the new water price."""
     bot.answer_callback_query(call.id)
     msg = bot.send_message(call.message.chat.id, "Enter the new water price (e.g. 2.5):")
     bot.register_next_step_handler(msg, save_new_price)
 
 
 def save_new_price(message):
+    """Saves the new price the user typed to the catalog."""
     try:
         price = float(message.text.replace(',', '.'))
         requests.put(f"{CATALOG_REST_URL}/price",
@@ -499,6 +520,7 @@ def save_new_price(message):
 
 @bot.message_handler(commands=['devices'])
 def handle_devices(message):
+    """Displays info about the Raspberry Pi device connected to this garden."""
     if not need_garden(message):
         return
     g_id, garden = active_garden(message.chat.id)
@@ -520,6 +542,7 @@ def handle_devices(message):
 
 @bot.message_handler(commands=['adddevice'])
 def handle_add_device(message):
+    """Asks the user to type the new device ID and name to register it."""
     if not need_garden(message):
         return
     g_id, garden = active_garden(message.chat.id)
@@ -531,6 +554,7 @@ def handle_add_device(message):
 
 
 def process_add_device(message, garden_id):
+    """Registers the new device in the catalog for this garden."""
     try:
         parts = [x.strip() for x in message.text.split(',')]
         if len(parts) != 2:
@@ -552,6 +576,7 @@ def process_add_device(message, garden_id):
 
 @bot.message_handler(commands=['removedevice'])
 def handle_remove_device(message):
+    """Shows a button to remove the device from this garden."""
     if not need_garden(message):
         return
     g_id, garden = active_garden(message.chat.id)
@@ -567,6 +592,7 @@ def handle_remove_device(message):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("del_dev_"))
 def process_del_device(call):
+    """Removes the device from the garden in the catalog."""
     bot.answer_callback_query(call.id)
     garden_id = call.data.replace("del_dev_", "")
     try:
@@ -582,6 +608,7 @@ def process_del_device(call):
 
 @bot.message_handler(commands=['thresholds'])
 def handle_thresholds(message):
+    """Shows all available crops and their minimum moisture threshold."""
     try:
         strats = requests.get(f"{CATALOG_REST_URL}/strategies", timeout=5).json()
         text   = "📊 *Available Crops & Thresholds*\n\n"
@@ -594,6 +621,7 @@ def handle_thresholds(message):
 
 @bot.message_handler(commands=['addplant'])
 def handle_add_plant(message):
+    """Asks the user to type the new crop info to add it."""
     msg = bot.send_message(message.chat.id,
         "🌿 *Add Crop*\nFormat: `Crop ID, Name, Min Moisture %`\nExample: *P3, Lettuce, 50.0*",
         parse_mode="Markdown")
@@ -601,6 +629,7 @@ def handle_add_plant(message):
 
 
 def process_add_plant(message):
+    """Saves the new crop and its moisture threshold to the catalog."""
     try:
         parts = [x.strip() for x in message.text.split(',')]
         if len(parts) != 3:
@@ -620,6 +649,7 @@ def process_add_plant(message):
 
 @bot.message_handler(commands=['removeplant'])
 def handle_remove_plant(message):
+    """Shows buttons to pick which crop to delete."""
     try:
         strats = requests.get(f"{CATALOG_REST_URL}/strategies", timeout=5).json()
         markup = telebot.types.InlineKeyboardMarkup()
@@ -634,6 +664,7 @@ def handle_remove_plant(message):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("del_plant_"))
 def process_del_plant(call):
+    """Removes the selected crop from the catalog."""
     bot.answer_callback_query(call.id)
     plant_id = call.data.replace("del_plant_", "")
     try:
@@ -650,6 +681,7 @@ def process_del_plant(call):
 
 @bot.message_handler(commands=['profile'])
 def handle_profile(message):
+    """Shows a list of users so the user can link their Telegram to a profile."""
     try:
         users  = requests.get(f"{CATALOG_REST_URL}/users", timeout=5).json()
         markup = telebot.types.InlineKeyboardMarkup()
@@ -665,6 +697,7 @@ def handle_profile(message):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("link_user_"))
 def handle_link_user(call):
+    """Links the user's Telegram chat ID to their account so they receive alerts."""
     bot.answer_callback_query(call.id)
     user_id = call.data.replace("link_user_", "")
     try:
@@ -680,6 +713,7 @@ def handle_link_user(call):
 
 @bot.message_handler(commands=['adduser'])
 def handle_add_user(message):
+    """Asks the user to type a new user ID and name."""
     msg = bot.send_message(message.chat.id,
         "👤 *Add User*\nFormat: `User ID, Name`\nExample: *U_004, Anna*",
         parse_mode="Markdown")
@@ -687,6 +721,7 @@ def handle_add_user(message):
 
 
 def process_add_user(message):
+    """Creates a new user in the catalog."""
     try:
         parts = [x.strip() for x in message.text.split(',')]
         if len(parts) != 2:
@@ -705,6 +740,7 @@ def process_add_user(message):
 
 @bot.message_handler(commands=['removeuser'])
 def handle_remove_user(message):
+    """Shows buttons to pick which user to delete."""
     try:
         users  = requests.get(f"{CATALOG_REST_URL}/users", timeout=5).json()
         markup = telebot.types.InlineKeyboardMarkup()
@@ -719,6 +755,7 @@ def handle_remove_user(message):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("del_user_"))
 def process_del_user(call):
+    """Deletes the selected user from the catalog."""
     bot.answer_callback_query(call.id)
     user_id = call.data.replace("del_user_", "")
     try:
@@ -734,6 +771,7 @@ def process_del_user(call):
 # ── Weather location ──────────────────────────────────────────────────────────
 
 def handle_menu_location(message):
+    """Shows the button to send GPS or type a city name."""
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
     markup.add(telebot.types.KeyboardButton("📍 Send GPS location", request_location=True))
     bot.send_message(message.chat.id,
@@ -743,6 +781,7 @@ def handle_menu_location(message):
 
 @bot.message_handler(commands=['city'])
 def handle_city(message):
+    """Asks the user to type a city name or GPS coordinates."""
     msg = bot.send_message(message.chat.id,
         "🌍 Enter city (e.g. `Turin,IT`) or coordinates (`45.07,7.68`):",
         parse_mode="Markdown")
@@ -750,6 +789,7 @@ def handle_city(message):
 
 
 def process_city(message):
+    """Saves the typed location to the catalog for weather lookups."""
     try:
         loc = message.text.strip()
         requests.put(f"{CATALOG_REST_URL}/location",
@@ -761,6 +801,7 @@ def process_city(message):
 
 @bot.message_handler(content_types=['location'])
 def handle_gps(message):
+    """Saves the GPS location the user shared from their phone."""
     loc = f"{message.location.latitude},{message.location.longitude}"
     try:
         requests.put(f"{CATALOG_REST_URL}/location",
@@ -774,6 +815,7 @@ def handle_gps(message):
 # ── Garden grid ───────────────────────────────────────────────────────────────
 
 def generate_text_grid(garden_id):
+    """Draws a text-based grid showing which slots are occupied and which are empty."""
     try:
         garden = requests.get(f"{CATALOG_REST_URL}/gardens/{garden_id}", timeout=5).json()
         grid   = garden.get("grid", {"max_pumps": 4, "max_taps": 4})
@@ -794,6 +836,7 @@ def generate_text_grid(garden_id):
 
 @bot.message_handler(commands=['garden'])
 def handle_show_garden(message):
+    """Shows the garden grid map to the user."""
     if not need_garden(message):
         return
     g_id, garden = active_garden(message.chat.id)
@@ -804,6 +847,7 @@ def handle_show_garden(message):
 
 @bot.message_handler(commands=['gardensize'])
 def handle_set_dimensions(message):
+    """Asks the user how big the garden grid should be."""
     if not need_garden(message):
         return
     msg = bot.send_message(message.chat.id,
@@ -813,6 +857,7 @@ def handle_set_dimensions(message):
 
 
 def process_set_dimensions(message):
+    """Updates the garden grid size in the catalog."""
     if not need_garden(message):
         return
     g_id, garden = active_garden(message.chat.id)
@@ -923,6 +968,7 @@ def handle_resize_confirm(call):
 # ── Admin panel ───────────────────────────────────────────────────────────────
 
 def handle_admin_panel(message):
+    """Shows the admin menu with add/remove buttons for everything."""
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     markup.add(
         telebot.types.InlineKeyboardButton("➕ Add Garden",    callback_data="create_garden"),
@@ -953,6 +999,7 @@ def handle_admin_panel(message):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("admin_"))
 def handle_admin_callbacks(call):
+    """Routes admin panel button presses to the right handler function."""
     bot.answer_callback_query(call.id)
     action = call.data.replace("admin_", "")
     dispatch = {
@@ -969,6 +1016,7 @@ def handle_admin_callbacks(call):
 
 @bot.callback_query_handler(func=lambda c: c.data == "menu_removegarden")
 def cb_remove_garden(call):
+    """Opens the remove garden menu from the admin panel."""
     bot.answer_callback_query(call.id)
     handle_remove_garden(call.message)
 
@@ -983,6 +1031,6 @@ if __name__ == "__main__":
         mqtt_client.connect(BROKER_IP, 1883, 60)
         mqtt_client.loop_start()
     except Exception as e:
-        print(f"⚠️ MQTT unavailable, bot starts anyway. ({e})")
+        print(f"[WARN] MQTT unavailable, bot starts anyway. ({e})")
     print("[BOT] Telegram Bot listening...")
     bot.infinity_polling()
