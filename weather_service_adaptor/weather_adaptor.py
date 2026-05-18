@@ -34,10 +34,9 @@ class WeatherAdaptor:
         url = f"https://api.tomorrow.io/v4/weather/forecast?location={location}&apikey={api_key}"
         headers = {"accept": "application/json"} 
         
-        print(f"[ADAPTOR] Weather request received for: {location}")
+        print(f"[ADAPTOR] Weather request for: {location}")
         
         try:
-            print(f"[ADAPTOR] Weather request for: {location}") # LOG OF START
             r = requests.get(url, headers=headers)
             r.raise_for_status()
             data = r.json()

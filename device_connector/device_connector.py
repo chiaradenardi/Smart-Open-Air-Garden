@@ -17,11 +17,11 @@ class DeviceConnector:
         self.device_id   = os.getenv("DEVICE_ID",   "RPi_001")
 
         # slot_id → pump state ("ON"/"OFF")
-        self.pump_states: dict = {}
+        self.pump_states = {}
         # slot_id → current soil moisture value
-        self.slot_moisture: dict = {}
+        self.slot_moisture = {}
         # slot metadata list fetched from catalog
-        self.slots: list = []
+        self.slots = []
 
         self.broker_ip   = None
         self.broker_port = 1883
@@ -60,7 +60,7 @@ class DeviceConnector:
 
     # ── Sensor simulation ─────────────────────────────────────────────────────
 
-    def simulate_sensors(self, slot_id: str):
+    def simulate_sensors(self, slot_id):
         """Creates fake temperature and humidity data. If the pump is ON, moisture goes up."""
         temp         = round(random.uniform(20.0, 24.0), 1)
         air_humidity = round(random.uniform(40.0, 50.0), 1)

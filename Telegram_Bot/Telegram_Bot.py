@@ -3,7 +3,6 @@ import paho.mqtt.client as mqtt
 import requests
 import json
 import os
-from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,7 +17,7 @@ INFLUX_URL        = os.getenv("INFLUX_ADAPTOR_URL","http://influx-adaptor:8081")
 
 # ── Garden selection state (in-RAM, per chat) ─────────────────────────────────
 # chat_id (str) → gardenID (str)
-chat_garden_map: dict = {}
+chat_garden_map = {}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -939,6 +938,6 @@ if __name__ == "__main__":
         mqtt_client.connect(BROKER_IP, 1883, 60)
         mqtt_client.loop_start()
     except Exception as e:
-        print(f"⚠️ MQTT unavailable, bot starts anyway. ({e})")
+        print(f"[WARN] MQTT unavailable, bot starts anyway. ({e})")
     print("[BOT] Telegram Bot listening...")
     bot.infinity_polling()

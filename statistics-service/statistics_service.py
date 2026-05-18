@@ -12,7 +12,6 @@ import os
 import paho.mqtt.client as mqtt
 import json
 import time
-import threading
 from dotenv import load_dotenv
 
 # Configuration logging
@@ -37,30 +36,30 @@ class MQTTConnection:
     def _on_connect(self, client, userdata, flags, rc):
         """Checks if the connection was successful and prints a message."""
         if rc == 0:
-            logger.info("✅ Connected to MQTT Broker")
+            logger.info("[MQTT] Connected to broker")
         else:
-            logger.error(f"❌ MQTT Error: {rc}")
+            logger.error(f"[MQTT] Connection error: {rc}")
     
     def _on_disconnect(self, client, userdata, rc):
         """Prints a warning if the connection drops."""
         if rc != 0:
-            logger.warning(f"⚠️ Unexpected MQTT disconnection: {rc}")
+            logger.warning(f"[MQTT] Unexpected disconnection: {rc}")
     
     def connect(self):
         """Tries to connect to the broker and starts the background loop."""
         try:
             self.client.connect(self.broker_ip, self.broker_port, keepalive=60)
             self.client.loop_start()
-            logger.info(f"📡 MQTT: connection to {self.broker_ip}:{self.broker_port}")
+            logger.info(f"[MQTT] Connecting to {self.broker_ip}:{self.broker_port}")
         except Exception as e:
-            logger.warning(f"⚠️ MQTT not available: {e}")
+            logger.warning(f"[MQTT] Not available: {e}")
     
     def publish(self, topic, message, qos=1):
         """Sends a message to a specific topic."""
         try:
             self.client.publish(topic, message, qos=qos)
         except Exception as e:
-            logger.warning(f"⚠️ Error publishing on MQTT: {e}")
+            logger.warning(f"[MQTT] Publish error: {e}")
     
     def is_connected(self):
         """Returns True if the client is currently connected to the broker."""
@@ -90,16 +89,16 @@ class StatisticsService:
             response.raise_for_status()
             price_per_m3 = response.json()
             price_per_liter = price_per_m3 / 1000.0
-            logger.info(f"💧 Water price fetched from Catalog: {price_per_m3} €/m³ → {price_per_liter} €/L")
+            logger.info(f"[PRICE] Water price from Catalog: {price_per_m3} eur/m3 -> {price_per_liter} eur/L")
             return price_per_liter
         except Exception as e:
-            logger.warning(f"⚠️ Could not fetch price from Catalog: {e}. Using default: {self.DEFAULT_PRICE_PER_LITER} €/L")
+            logger.warning(f"[PRICE] Could not fetch price: {e}. Using default: {self.DEFAULT_PRICE_PER_LITER} eur/L")
             return self.DEFAULT_PRICE_PER_LITER
     
-    def get_pump_history(self, period: str = "7d"):
+    def get_pump_history(self, period="7d"):
         """Asks the InfluxDB database for the history of the pump."""
         try:
-            logger.info(f"📊 Retrieving pump history for period: {period}")
+            logger.info(f"[HISTORY] Retrieving pump history for period: {period}")
             
             url = f"{self.influx_url}/history"
             params = {
@@ -111,12 +110,12 @@ class StatisticsService:
             response.raise_for_status()
             
             data = response.json()
-            logger.info(f"✅ Data received: {len(data)} records")
+            logger.info(f"[HISTORY] Got {len(data)} records")
             return data
             
         except requests.exceptions.RequestException as e:
-            logger.warning(f"⚠️ InfluxDB Adaptor not available: {e}")
-            logger.warning("📌 Using test data (fallback)")
+            logger.warning(f"[HISTORY] InfluxDB not available: {e}")
+            logger.warning("[HISTORY] Using fallback test data")
             
             return [
                 {"time": (datetime.now() - timedelta(days=i)).isoformat(),
@@ -124,7 +123,7 @@ class StatisticsService:
                 for i in range(5)
             ]
     
-    def calculate_water_savings(self, pump_history: list):
+    def calculate_water_savings(self, pump_history):
         """Does the math to find out how much water we saved compared to a normal timer."""
         pump_activations_smart = sum(1 for dato in pump_history if dato.get("value") == 1)
         
@@ -153,7 +152,7 @@ class StatisticsService:
             "cost_per_liter": price_per_liter
         }
     
-    def build_full_report(self, period: str = "7d"):
+    def build_full_report(self, period="7d"):
         """Creates a big dictionary with all the stats and the raw data."""
         pump_history = self.get_pump_history(period)
         statistics = self.calculate_water_savings(pump_history)
@@ -167,7 +166,7 @@ class StatisticsService:
             "raw_data": pump_history[:10]
         }
     
-    def publish_statistics(self, statistics: dict):
+    def publish_statistics(self, statistics):
         """Sends the final stats to the Telegram bot using MQTT."""
         try:
             message = {
@@ -184,10 +183,10 @@ class StatisticsService:
                 qos=1
             )
             
-            logger.info(f"📤 Statistics published on MQTT: {statistics['liters_saved']}L saved")
+            logger.info(f"[MQTT] Stats published: {statistics['liters_saved']}L saved")
             
         except Exception as e:
-            logger.warning(f"⚠️ Error publishing on MQTT: {e}")
+            logger.warning(f"[MQTT] Publish error: {e}")
     
     def get_mqtt_status(self):
         """Returns if the MQTT is working, useful for the health check."""
@@ -217,13 +216,13 @@ class WaterSavedEndpoint:
     exposed = True
     def GET(self, period='15m', **kwargs):
         """Handles GET requests to calculate savings."""
-        logger.info(f"📈 Dashboard request: calculating savings for {period}")
+        logger.info(f"[API] Water-saved request for period: {period}")
         try:
             report = statistics_service.build_full_report(period)
             statistics_service.publish_statistics(report["statistics"])
             return json.dumps(report).encode('utf-8')
         except Exception as e:
-            logger.error(f"❌ Error in calculation: {e}")
+            logger.error(f"[ERROR] Calculation failed: {e}")
             cherrypy.response.status = 500
             return json.dumps({"status": "error", "message": str(e)}).encode('utf-8')
 
@@ -241,7 +240,7 @@ class PumpHistoryEndpoint:
                 "data": history
             }).encode('utf-8')
         except Exception as e:
-            logger.error(f"❌ Error in pump history retrieval: {e}")
+            logger.error(f"[ERROR] Pump history retrieval failed: {e}")
             cherrypy.response.status = 500
             return json.dumps({"status": "error", "message": str(e)}).encode('utf-8')
 
@@ -261,7 +260,7 @@ class StatisticsEndpoint:
                 "statistics": statistics
             }).encode('utf-8')
         except Exception as e:
-            logger.error(f"❌ Error in statistics calculation: {e}")
+            logger.error(f"[ERROR] Statistics calculation failed: {e}")
             cherrypy.response.status = 500
             return json.dumps({"status": "error", "message": str(e)}).encode('utf-8')
 
@@ -280,8 +279,8 @@ class HealthEndpoint:
 # ==================== MAIN ====================
 
 if __name__ == '__main__':
-    logger.info("🚀 Statistics Service started")
-    logger.info(f"📡 InfluxDB Adaptor: {INFLUX_ADAPTOR_URL}")
+    logger.info("[MAIN] Statistics Service started")
+    logger.info(f"[MAIN] InfluxDB Adaptor: {INFLUX_ADAPTOR_URL}")
     
     conf = {
         '/': {

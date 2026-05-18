@@ -5,7 +5,6 @@ Has tools to check if data is in the right format and to build standard response
 
 import json
 import logging
-from typing import Any, Dict, Optional, Tuple
 import jsonschema
 from jsonschema import validate, ValidationError, Draft7Validator
 from datetime import datetime
@@ -51,10 +50,10 @@ class SchemaValidator:
         try:
             with open(schema_path, 'r') as f:
                 self.schemas[schema_name] = json.load(f)
-            self.logger.info(f"✓ Schema loaded: {schema_name}")
+            self.logger.info(f"[OK] Schema loaded: {schema_name}")
             return True
         except Exception as e:
-            self.logger.error(f"✗ Failed to load schema {schema_name}: {e}")
+            self.logger.error(f"[ERROR] Failed to load schema {schema_name}: {e}")
             return False
     
     def validate(self, data, schema_name):

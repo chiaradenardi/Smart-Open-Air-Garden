@@ -1,6 +1,5 @@
 import time
 import json
-import sys
 from datetime import datetime
 from MyMQTT import MyMQTT
 
