@@ -23,7 +23,7 @@ TOPIC_ALARMS = "garden/alerts/faults"
 
 alarms_received = []
 
-# ============ CALLBACK MQTT ============
+# CALLBACK MQTT 
 def on_connect(client, userdata, flags, rc):
     """When connected, subscribe to the alarm topic to see if the fault is detected."""
     if rc == 0:
@@ -55,7 +55,7 @@ def on_disconnect(client, userdata, rc):
     else:
         print(f"[TEST] Disconnected successfully")
 
-# ============ FUNZIONI DI TEST ============
+# FUNZIONI DI TEST 
 def publish_message(client, topic, payload, delay=0):
     """Publishes a JSON message to a topic, with an optional delay before sending."""
     if delay > 0:
@@ -72,26 +72,26 @@ def test_fault_detection(client):
     print("="*70)
     
     try:
-        # ===== STEP 0: ALARM SUBSCRIPTION =====
+        # STEP 0: ALARM SUBSCRIPTION
         print("\n[STEP 0] Subscribing to alarm topics...")
         client.subscribe(TOPIC_ALARMS)
         print(f"[OK] Subscribed to: {TOPIC_ALARMS}")
         time.sleep(1)
         
-        # ===== STEP 1: TURN ON THE PUMP =====
+        # STEP 1: TURN ON THE PUMP
         print("\n[STEP 1] Turning on the pump...")
         pump_on = [{"n": "pump_status", "v": 1}]
         publish_message(client, TOPIC_PUMP, pump_on, delay=1)
         print("Waiting to record moisture baseline...")
         time.sleep(2)
         
-        # ===== STEP 2: SEND INITIAL MOISTURE DATA =====
+        # STEP 2: SEND INITIAL MOISTURE DATA 
         print("\n[STEP 2] Sending baseline moisture (50%)...")
         telemetry_1 = [{"n": "soil_moisture", "v": 50.0}]
         publish_message(client, TOPIC_TELEMETRY, telemetry_1)
         time.sleep(2)
         
-        # ===== STEP 3: WAIT FOR PUMP TIMEOUT (15 seconds) AND COLLECT ALARMS =====
+        # STEP 3: WAIT FOR PUMP TIMEOUT (15 seconds) AND COLLECT ALARMS 
         print("\n[STEP 3] Sending telemetry data without moisture increase...")
         print("Fault Detection will wait 15 seconds before triggering alarm...")
         
@@ -109,7 +109,7 @@ def test_fault_detection(client):
                 print(f"[OK] ALARM DETECTED after {elapsed} seconds!")
                 break
         
-        # ===== RESULT =====
+        # RESULT
         print("\n" + "="*70)
         print("TEST RESULTS")
         print("="*70)
@@ -131,7 +131,7 @@ def test_fault_detection(client):
             print("   - Check the Fault Detection Service logs")
             print("   - Verify that PUMP_TIMEOUT_SECONDS < 15 in config")
         
-        # ===== CLEANUP =====
+        # CLEANUP
         print("\n[CLEANUP] Turning off the pump...")
         pump_off = [{"n": "pump_status", "v": 0}]
         publish_message(client, TOPIC_PUMP, pump_off)
@@ -142,7 +142,7 @@ def test_fault_detection(client):
         import traceback
         traceback.print_exc()
 
-# ============ MAIN ============
+# MAIN
 if __name__ == "__main__":
     # Create MQTT client
     global_client = mqtt.Client(client_id="TestClient")
