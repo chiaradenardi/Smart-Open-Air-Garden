@@ -1,5 +1,5 @@
 {
-    "lastUpdateJSON": 1779125420.35005,
+    "lastUpdateJSON": 1779225929.3539963,
     "broker": {
         "broker_name": "message-broker",
         "port": 1883
@@ -141,19 +141,8 @@
                 "max_taps": 5
             },
             "device": {
-                "deviceID": "RPi_003",
-                "deviceName": "GardenGateway_003",
-                "status": "active",
-                "sensors": [
-                    "SoilMoisture",
-                    "DHT11"
-                ],
-                "actuators": [
-                    "MicroServoPump"
-                ],
-                "config": {
-                    "clientID": "Client_RPi_003"
-                }
+                "deviceID": "rpi_001",
+                "deviceName": "GardenGateway_003"
             },
             "slots": [
                 {
@@ -171,6 +160,20 @@
                 }
             ],
             "ownerIDs": []
+        },
+        {
+            "gardenID": "G_004",
+            "gardenName": "First Floor Garden",
+            "location": "",
+            "grid": {
+                "max_pumps": 5,
+                "max_taps": 5
+            },
+            "device": {},
+            "slots": [],
+            "ownerIDs": [
+                "U_001"
+            ]
         }
     ],
     "servicesList": [
@@ -318,6 +321,10 @@
         "P11": {
             "name": "Onion",
             "min_moisture_threshold": 48.0
+        },
+        "P15": {
+            "name": "Potato",
+            "min_moisture_threshold": 63.0
         }
     }
 }

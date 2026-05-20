@@ -162,6 +162,7 @@ def handle_main_menu(call):
         "profile":    handle_profile,
         "location":   handle_menu_location,
         "admin":      handle_admin_panel,
+        "removegarden": handle_remove_garden,
     }
     fn = dispatch.get(cmd)
     if fn:
@@ -1032,13 +1033,6 @@ def handle_admin_callbacks(call):
     fn = dispatch.get(action)
     if fn:
         fn(call.message)
-
-
-@bot.callback_query_handler(func=lambda c: c.data == "menu_removegarden")
-def cb_remove_garden(call):
-    """Opens the remove garden menu from the admin panel."""
-    bot.answer_callback_query(call.id)
-    handle_remove_garden(call.message)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────

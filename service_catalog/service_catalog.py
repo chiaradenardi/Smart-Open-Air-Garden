@@ -250,7 +250,8 @@ class GardensEndpoint:
             device_id = body.get("deviceID")
             if device_id:
                 for g in data["gardensList"]:
-                    if g["gardenID"] != garden_id and g.get("device", {}).get("deviceID") == device_id:
+                    existing_device_id = g.get("device", {}).get("deviceID")
+                    if g["gardenID"] != garden_id and existing_device_id and existing_device_id.lower() == device_id.lower():
                         return json.dumps({"error": f"Device '{device_id}' is already registered in garden '{g['gardenID']}' ({g['gardenName']})"}, indent=4)
             garden["device"] = body
             _save(data)
