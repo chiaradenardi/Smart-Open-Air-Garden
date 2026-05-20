@@ -15,16 +15,16 @@ CATALOG_REST_URL  = os.getenv("CATALOG_URL",      "http://service-catalog:8080")
 STATISTICS_URL    = os.getenv("STATISTICS_URL",   "http://statistics-service:8082")
 INFLUX_URL        = os.getenv("INFLUX_ADAPTOR_URL","http://influx-adaptor:8081")
 
-# ── Garden selection state (in-RAM, per chat) ─────────────────────────────────
-# chat_id (str) → gardenID (str)
+# Garden selection state (in-memory, per chat)
+# Maps chat_id (str) → gardenID (str)
 chat_garden_map = {}
 
-# ── Pending resize confirmations (in-RAM, per chat) ───────────────────────────
-# chat_id (str) → {"garden_id": str, "max_pumps": int, "max_taps": int, "to_delete": [str]}
+# Pending resize confirmations (in-memory, per chat)
+# Maps chat_id (str) → {"garden_id": str, "max_pumps": int, "max_taps": int, "to_delete": [str]}
 pending_resize: dict = {}
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# Helpers
 
 def gid(chat_id):
     """Finds which garden the user is currently looking at."""
@@ -62,7 +62,7 @@ def err(message, e):
     bot.send_message(message.chat.id, f"❌ Error: {e}")
 
 
-# ── MQTT ──────────────────────────────────────────────────────────────────────
+# MQTT handlers
 
 def on_connect(client, userdata, flags, rc):
     """Subscribes the bot to alarms and pump updates when it connects to MQTT."""
@@ -117,7 +117,7 @@ def on_message(client, userdata, msg):
         print(f"[BOT MQTT ERROR] {e}")
 
 
-# ── /start ────────────────────────────────────────────────────────────────────
+# Start command
 
 @bot.message_handler(commands=['start'])
 def handle_start(message):
@@ -169,7 +169,7 @@ def handle_main_menu(call):
         fn(call.message)
 
 
-# ── Gardens management ────────────────────────────────────────────────────────
+# Gardens management
 
 @bot.message_handler(commands=['gardens'])
 def handle_gardens(message):
@@ -298,7 +298,7 @@ def process_del_garden(call):
         err(call.message, e)
 
 
-# ── /status ───────────────────────────────────────────────────────────────────
+# Live status display
 
 @bot.message_handler(commands=['status'])
 def handle_status(message):
@@ -351,7 +351,7 @@ def handle_status(message):
         err(message, e)
 
 
-# ── Crop management ───────────────────────────────────────────────────────────
+# Crop management
 
 @bot.message_handler(commands=['crop'])
 def handle_crop(message):
@@ -414,7 +414,7 @@ def handle_crop_selection(call):
         err(call.message, e)
 
 
-# ── Slots ─────────────────────────────────────────────────────────────────────
+# Slots management
 
 @bot.message_handler(commands=['addslot'])
 def handle_add_slot(message):
@@ -495,7 +495,7 @@ def process_del_slot(call):
         err(call.message, e)
 
 
-# ── Water price ───────────────────────────────────────────────────────────────
+# Water price management
 
 @bot.message_handler(commands=['price'])
 def handle_price(message):
@@ -533,7 +533,7 @@ def save_new_price(message):
         err(message, e)
 
 
-# ── Devices ───────────────────────────────────────────────────────────────────
+# Devices management
 
 @bot.message_handler(commands=['devices'])
 def handle_devices(message):
@@ -625,7 +625,7 @@ def process_del_device(call):
         err(call.message, e)
 
 
-# ── Crops / Strategies ────────────────────────────────────────────────────────
+# Irrigation strategies (crops)
 
 @bot.message_handler(commands=['thresholds'])
 def handle_thresholds(message):
@@ -698,7 +698,7 @@ def process_del_plant(call):
         err(call.message, e)
 
 
-# ── Users / Profile ───────────────────────────────────────────────────────────
+# User profile management
 
 @bot.message_handler(commands=['profile'])
 def handle_profile(message):
@@ -789,7 +789,7 @@ def process_del_user(call):
         err(call.message, e)
 
 
-# ── Weather location ──────────────────────────────────────────────────────────
+# Weather location management
 
 def handle_menu_location(message):
     """Shows the button to send GPS or type a city name."""
@@ -833,7 +833,7 @@ def handle_gps(message):
         err(message, e)
 
 
-# ── Garden grid ───────────────────────────────────────────────────────────────
+# Garden grid configuration
 
 def generate_text_grid(garden_id):
     """Draws a text-based grid showing which slots are occupied and which are empty."""
@@ -986,7 +986,7 @@ def handle_resize_confirm(call):
         err(call.message, e)
 
 
-# ── Admin panel ───────────────────────────────────────────────────────────────
+# Admin panel
 
 def handle_admin_panel(message):
     """Shows the admin menu with add/remove buttons for everything."""
@@ -1033,6 +1033,13 @@ def handle_admin_callbacks(call):
     fn = dispatch.get(action)
     if fn:
         fn(call.message)
+
+
+@bot.callback_query_handler(func=lambda c: c.data == "menu_removegarden")
+def cb_remove_garden(call):
+    """Opens the remove garden menu from the admin panel."""
+    bot.answer_callback_query(call.id)
+    handle_remove_garden(call.message)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────

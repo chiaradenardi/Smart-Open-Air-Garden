@@ -2,7 +2,7 @@ import time
 import json
 import random
 import requests
-from MyMQTT import MyMQTT
+from shared_utils.MyMQTT import MyMQTT
 
 
 class MultiSensorSim:

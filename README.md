@@ -1,15 +1,4 @@
-# Smart Open Air Garden
-
-## Documentation
-
-Full API and data format docs are in the `/docs` folder:
-
-- [API & Data Format Overview](./docs/README.md)
-- [Data Format Specification](./docs/DATA_FORMATS_SPECIFICATION.md)
-- [MQTT Message Formats](./docs/MQTT_MESSAGE_FORMATS.md)
-- [REST API Standards](./docs/REST_API_STANDARDS.md)
-- [OpenAPI Specs](./docs/api/) — per-service API docs
-- [JSON Schemas](./docs/schemas/) — schema definitions for validation
+# Smart Open Air Garden Documentation
 
 ## Architecture
 

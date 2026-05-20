@@ -2,11 +2,6 @@ import cherrypy
 import time
 import json
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Helper
-# ─────────────────────────────────────────────────────────────────────────────
-
 def _load():
     """Reads the JSON database from the local file."""
     with open("catalogManager.json", "r") as f:
@@ -25,11 +20,6 @@ def _find_garden(data, garden_id):
             return g
     return None
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# /broker
-# ─────────────────────────────────────────────────────────────────────────────
-
 class BrokerEndpoint:
     """This endpoint provides the IP and port of the MQTT broker."""
     exposed = True
@@ -39,11 +29,6 @@ class BrokerEndpoint:
         data = _load()
         b = data["broker"]
         return json.dumps({"broker_name": b["broker_name"], "broker_port": b["port"]}, indent=4)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# /price
-# ─────────────────────────────────────────────────────────────────────────────
 
 class PriceEndpoint:
     """This endpoint manages the cost of water per cubic meter."""
@@ -65,34 +50,30 @@ class PriceEndpoint:
         return json.dumps({"result": "Price updated", "newPrice": data["waterPricePerM3"]}, indent=4)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# /gardens  (handles all sub-paths via *uri)
-#
-# GET    /gardens                            → list all gardens
-# POST   /gardens                            → create garden
-# GET    /gardens/{gID}                      → single garden
-# DELETE /gardens/{gID}                      → delete garden
-# GET    /gardens/{gID}/slots                → slots list
-# POST   /gardens/{gID}/slots                → add slot
-# GET    /gardens/{gID}/slots/{sID}          → single slot
-# PUT    /gardens/{gID}/slots/{sID}          → update slot (plantID)
-# DELETE /gardens/{gID}/slots/{sID}          → remove slot
-# GET    /gardens/{gID}/device               → device info
-# PUT    /gardens/{gID}/device               → update device
-# GET    /gardens/{gID}/grid                 → grid
-# PUT    /gardens/{gID}/grid                 → update grid
-# GET    /gardens/{gID}/location             → location
-# PUT    /gardens/{gID}/location             → update location
-# GET    /gardens/{gID}/owners               → owner user objects
-# POST   /gardens/{gID}/owners               → add owner (body: {userID})
-# DELETE /gardens/{gID}/owners/{uID}         → remove owner
-# ─────────────────────────────────────────────────────────────────────────────
+# API Reference: /gardens endpoint
+# 
+# GET    /gardens                      → list all gardens
+# POST   /gardens                      → create garden
+# GET    /gardens/{gID}                → single garden
+# DELETE /gardens/{gID}                → delete garden
+# GET    /gardens/{gID}/slots          → slots list
+# POST   /gardens/{gID}/slots          → add slot
+# GET    /gardens/{gID}/slots/{sID}    → single slot
+# PUT    /gardens/{gID}/slots/{sID}    → update slot (plantID)
+# DELETE /gardens/{gID}/slots/{sID}    → remove slot
+# GET    /gardens/{gID}/device         → device info
+# PUT    /gardens/{gID}/device         → update device
+# GET    /gardens/{gID}/grid           → grid configuration
+# PUT    /gardens/{gID}/grid           → update grid
+# GET    /gardens/{gID}/location       → location
+# PUT    /gardens/{gID}/location       → update location
+# GET    /gardens/{gID}/owners         → owner user objects
+# POST   /gardens/{gID}/owners         → add owner (body: {userID})
+# DELETE /gardens/{gID}/owners/{uID}   → remove owner
 
 class GardensEndpoint:
     """This endpoint manages everything about gardens, including their slots and devices."""
     exposed = True
-
-    # ── GET ──────────────────────────────────────────────────────────────────
 
     def GET(self, *uri, **params):
         """Returns data about gardens. You can ask for a list of all gardens or a specific one."""
@@ -141,8 +122,6 @@ class GardensEndpoint:
 
         return json.dumps({"error": "Invalid endpoint"}, indent=4)
 
-    # ── POST ─────────────────────────────────────────────────────────────────
-
     def POST(self, *uri, **params):
         """Creates a new garden, adds a new slot, or adds a new owner to a garden."""
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
@@ -179,7 +158,7 @@ class GardensEndpoint:
 
         section = uri[1]
 
-        # POST /gardens/{gID}/slots — add slot
+        # POST /gardens/{gID}/slots - add slot
         if section == "slots":
             if "slotID" not in body or "plantID" not in body:
                 return json.dumps({"error": "Missing slotID or plantID"}, indent=4)
@@ -198,7 +177,7 @@ class GardensEndpoint:
             _save(data)
             return json.dumps({"result": "Slot added", "slotID": new_slot["slotID"]}, indent=4)
 
-        # POST /gardens/{gID}/owners — add owner
+        # POST /gardens/{gID}/owners - add owner
         if section == "owners":
             user_id = body.get("userID")
             if not user_id:
@@ -210,8 +189,6 @@ class GardensEndpoint:
             return json.dumps({"result": "Owner added"}, indent=4)
 
         return json.dumps({"error": "Invalid endpoint"}, indent=4)
-
-    # ── PUT ──────────────────────────────────────────────────────────────────
 
     def PUT(self, *uri, **params):
         """Updates information about an existing garden, its slots, or its device."""
@@ -228,7 +205,7 @@ class GardensEndpoint:
 
         section = uri[1]
 
-        # PUT /gardens/{gID}/slots/{sID}
+        # PUT /gardens/{gID}/slots/{sID} - update slot
         if section == "slots":
             if len(uri) < 3:
                 return json.dumps({"error": "Specify slot ID"}, indent=4)
@@ -245,7 +222,7 @@ class GardensEndpoint:
                     return json.dumps(s, indent=4)
             return json.dumps({"error": f"Slot '{slot_id}' not found"}, indent=4)
 
-        # PUT /gardens/{gID}/device
+        # PUT /gardens/{gID}/device - update device
         if section == "device":
             device_id = body.get("deviceID")
             if device_id:
@@ -257,7 +234,7 @@ class GardensEndpoint:
             _save(data)
             return json.dumps({"result": "Device updated"}, indent=4)
 
-        # PUT /gardens/{gID}/grid
+        # PUT /gardens/{gID}/grid - update grid
         if section == "grid":
             garden.setdefault("grid", {})
             if "max_pumps" in body:
@@ -267,17 +244,16 @@ class GardensEndpoint:
             _save(data)
             return json.dumps({"result": "Grid updated", "grid": garden["grid"]}, indent=4)
 
-        # PUT /gardens/{gID}/location
+        # PUT /gardens/{gID}/location - update location
         if section == "location":
             if "location" not in body:
                 return json.dumps({"error": "Missing location"}, indent=4)
             garden["location"] = body["location"]
-            # also update global fallback
             data["garden_location"] = body["location"]
             _save(data)
             return json.dumps({"result": "Location updated", "location": garden["location"]}, indent=4)
 
-        # PUT /gardens/{gID} — update name or ownerIDs
+        # PUT /gardens/{gID} - update name or ownerIDs
         if len(uri) == 1:
             if "gardenName" in body:
                 garden["gardenName"] = body["gardenName"]
@@ -287,8 +263,6 @@ class GardensEndpoint:
             return json.dumps({"result": "Garden updated"}, indent=4)
 
         return json.dumps({"error": "Invalid endpoint"}, indent=4)
-
-    # ── DELETE ───────────────────────────────────────────────────────────────
 
     def DELETE(self, *uri, **params):
         """Removes a garden, a slot, or an owner from the database."""
@@ -302,7 +276,7 @@ class GardensEndpoint:
         if not garden:
             return json.dumps({"error": f"Garden '{garden_id}' not found"}, indent=4)
 
-        # DELETE /gardens/{gID}
+        # DELETE /gardens/{gID} - remove garden
         if len(uri) == 1:
             data["gardensList"].remove(garden)
             _save(data)
@@ -331,10 +305,7 @@ class GardensEndpoint:
 
         return json.dumps({"error": "Invalid endpoint"}, indent=4)
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# /users
-# ─────────────────────────────────────────────────────────────────────────────
+# Users endpoint
 
 class UsersEndpoint:
     """This endpoint handles user registration and linking Telegram IDs."""
@@ -387,9 +358,7 @@ class UsersEndpoint:
         return json.dumps({"error": "USER ID not found"}, indent=4)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# /strategies
-# ─────────────────────────────────────────────────────────────────────────────
+# Irrigation strategies endpoint
 
 class StrategiesEndpoint:
     """This endpoint holds the irrigation rules (like moisture thresholds) for different crops."""
@@ -442,9 +411,7 @@ class StrategiesEndpoint:
         return json.dumps({"error": "STRATEGY ID not found"}, indent=4)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# /services
-# ─────────────────────────────────────────────────────────────────────────────
+# Services endpoint
 
 class ServicesEndpoint:
     exposed = True
@@ -492,9 +459,7 @@ class ServicesEndpoint:
         return json.dumps({"error": "SERVICE ID not found"}, indent=4)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# /location  (global — used by WeatherServiceAdaptor)
-# ─────────────────────────────────────────────────────────────────────────────
+# Global location endpoint (used by WeatherServiceAdaptor)
 
 class LocationEndpoint:
     """This endpoint stores the GPS location of the garden to fetch correct weather data."""
@@ -516,9 +481,7 @@ class LocationEndpoint:
         return json.dumps({"result": "Location updated", "location": data["garden_location"]}, indent=4)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Server bootstrap
-# ─────────────────────────────────────────────────────────────────────────────
 
 class CatalogRoot:
     pass

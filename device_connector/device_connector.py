@@ -38,7 +38,7 @@ class DeviceConnector(threading.Thread):
         self.client      = None
         self.stop_event  = threading.Event()
 
-    # ── Catalog interactions ──────────────────────────────────────────────────
+    # Catalog interactions
 
     def get_broker_config(self):
         """Asks the catalog where the MQTT broker is located."""
@@ -61,7 +61,7 @@ class DeviceConnector(threading.Thread):
         except Exception:
             return []
 
-    # ── Sensor simulation ─────────────────────────────────────────────────────
+    # Sensor simulation
 
     def simulate_sensors(self, slot_id):
         """Creates fake temperature and humidity data. If the pump is ON, moisture goes up."""
@@ -77,7 +77,7 @@ class DeviceConnector(threading.Thread):
         self.slot_moisture[slot_id] = new_moisture
         return temp, air_humidity, new_moisture
 
-    # ── MQTT setup ────────────────────────────────────────────────────────────
+    # MQTT setup
 
     def _on_connect(self, client, userdata, flags, rc):
         """When connected to MQTT, it subscribes to the pump topics for all slots."""
@@ -129,7 +129,7 @@ class DeviceConnector(threading.Thread):
             except Exception:
                 time.sleep(5)
 
-    # ── Telemetry publishing ──────────────────────────────────────────────────
+    # Telemetry publishing
 
     def publish_telemetry(self):
         """Sends the generated sensor data to MQTT using SenML format."""
@@ -170,7 +170,7 @@ class DeviceConnector(threading.Thread):
             self.client.publish(topic, json.dumps(payload))
             safe_print(f"[{self.garden_id}/{s_id}] Temp:{temp}°C | Moisture:{round(moisture,1)}% | Pump:{self.pump_states.get(s_id,'OFF')}")
 
-    # ── Lifecycle ─────────────────────────────────────────────────────────────
+    # Lifecycle
 
     def run(self):
         """Main thread function: gets config, connects to MQTT, and loops to send data every 5 seconds."""

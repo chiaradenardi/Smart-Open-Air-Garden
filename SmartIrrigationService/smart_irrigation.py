@@ -1,7 +1,7 @@
 import time
 import json
 import requests
-from MyMQTT import MyMQTT
+from shared_utils.MyMQTT import MyMQTT
 
 
 class SmartIrrigation:
@@ -88,7 +88,7 @@ class SmartIrrigation:
 
             pump_topic    = f"garden/{garden_id}/{slot_id}/pump"
 
-            # ── Turn ON logic ─────────────────────────────────────────────
+            # Turn ON logic
             if current_moisture < moisture_threshold:
                 if not self.pumps_status[key]:
                     now        = time.time()
@@ -113,7 +113,7 @@ class SmartIrrigation:
                     else:
                         print(f"[{key}] SKIP (rain expected: {rain_6h}mm)")
 
-            # ── Turn OFF logic ────────────────────────────────────────────
+            # Turn OFF logic 
             elif current_moisture >= target_moisture:
                 if self.pumps_status[key]:
                     print(f"[{key}] Moisture restored. STOP.")
