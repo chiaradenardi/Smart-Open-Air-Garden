@@ -2,7 +2,7 @@ import time
 import json
 import os
 from datetime import datetime
-from MyMQTT import MyMQTT
+from shared_utils.MyMQTT import MyMQTT
 
 BROKER_IP   = os.getenv("BROKER_IP",   "message-broker")
 BROKER_PORT = int(os.getenv("BROKER_PORT", "1883"))

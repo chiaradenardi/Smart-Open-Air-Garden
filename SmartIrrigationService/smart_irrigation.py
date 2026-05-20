@@ -1,7 +1,7 @@
 import time
 import json
 import requests
-from MyMQTT import MyMQTT
+from shared_utils.MyMQTT import MyMQTT
 
 
 class SmartIrrigation:
