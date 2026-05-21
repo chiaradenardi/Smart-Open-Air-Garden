@@ -1035,14 +1035,7 @@ def handle_admin_callbacks(call):
         fn(call.message)
 
 
-@bot.callback_query_handler(func=lambda c: c.data == "menu_removegarden")
-def cb_remove_garden(call):
-    """Opens the remove garden menu from the admin panel."""
-    bot.answer_callback_query(call.id)
-    handle_remove_garden(call.message)
-
-
-# ── Main ──────────────────────────────────────────────────────────────────────
+# Main entry point
 
 if __name__ == "__main__":
     mqtt_client = mqtt.Client()
