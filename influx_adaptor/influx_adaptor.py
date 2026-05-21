@@ -2,7 +2,7 @@ import json
 import requests
 import time
 import os
-from shared_utils.MyMQTT import MyMQTT
+from MyMQTT import MyMQTT
 from influxdb_client import InfluxDBClient, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 import cherrypy
