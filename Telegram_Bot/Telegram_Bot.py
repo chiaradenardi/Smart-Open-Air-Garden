@@ -431,29 +431,62 @@ def handle_add_slot(message):
 
 
 def process_add_slot(message, garden_id):
-    """Takes the input and registers a new slot in the catalog."""
+    """Takes the input and registers a new slot in the catalog with boundary and overlap checks."""
     try:
         parts = [x.strip() for x in message.text.split(',')]
         if len(parts) != 2:
-            bot.send_message(message.chat.id, "❌ Format: `Coordinate, Crop ID`"); return
+            bot.send_message(message.chat.id, "❌ Format: `Coordinate, Crop ID`")
+            return
+            
         slot_id, plant_id = parts
         slot_id = slot_id.upper()
+        
         if not slot_id.startswith("P") or "_R" not in slot_id:
-            bot.send_message(message.chat.id, "❌ Slot must be Px_Ry format (e.g. P1_R2)"); return
+            bot.send_message(message.chat.id, "❌ Slot must be Px_Ry format (e.g. P1_R2)")
+            return
+
+        # 1. Recupero i dati correnti del giardino per i controlli
+        garden = requests.get(f"{CATALOG_REST_URL}/gardens/{garden_id}", timeout=5).json()
+        grid = garden.get("grid", {"max_pumps": 4, "max_taps": 4})
+        slots = garden.get("slots", [])
+
+        # 2. Controllo: Lo slot è già assegnato?
+        if any(s.get("slotID") == slot_id for s in slots):
+            bot.send_message(message.chat.id, f"❌ Lo slot `{slot_id}` è già occupato! Rimuovilo prima di sovrascriverlo.")
+            return
+
+        # 3. Controllo: Le coordinate sono dentro i limiti della griglia?
+        try:
+            p_part, r_part = slot_id.split("_R")
+            p_num = int(p_part.replace("P", ""))
+            r_num = int(r_part)
+            
+            if p_num > grid.get("max_pumps", 4) or r_num > grid.get("max_taps", 4):
+                bot.send_message(message.chat.id, 
+                                 f"❌ Coordinate fuori limite. La griglia attuale è {grid.get('max_pumps')}×{grid.get('max_taps')}.")
+                return
+        except ValueError:
+            bot.send_message(message.chat.id, "❌ Formato numeri non valido.")
+            return
+
+        # 4. Superati i controlli, procedo alla creazione
         payload = {"slotID": slot_id, "plantID": plant_id,
                    "slotName": f"Zone {slot_id}", "status": "active"}
         r = requests.post(f"{CATALOG_REST_URL}/gardens/{garden_id}/slots",
                           json=payload, timeout=5)
         r.raise_for_status()
+        
         d = r.json()
         if "error" in d:
-            bot.send_message(message.chat.id, f"❌ {d['error']}"); return
+            bot.send_message(message.chat.id, f"❌ {d['error']}")
+            return
+            
         bot.send_message(message.chat.id,
-            f"✅ Slot `{slot_id}` added!\n\n{generate_text_grid(garden_id)}",
+            f"✅ Slot `{slot_id}` aggiunto!\n\n{generate_text_grid(garden_id)}",
             parse_mode="Markdown")
+            
     except Exception as e:
         err(message, e)
-
 
 @bot.message_handler(commands=['removeslot'])
 def handle_remove_slot(message):
@@ -836,24 +869,34 @@ def handle_gps(message):
 # Garden grid configuration
 
 def generate_text_grid(garden_id):
-    """Draws a text-based grid showing which slots are occupied and which are empty."""
+    """Draws a text-based grid with stable emojis for Telegram rendering."""
     try:
         garden = requests.get(f"{CATALOG_REST_URL}/gardens/{garden_id}", timeout=5).json()
         grid   = garden.get("grid", {"max_pumps": 4, "max_taps": 4})
         slots  = garden.get("slots", [])
+        
         max_p  = grid.get("max_pumps", 4)
         max_t  = grid.get("max_taps",  4)
-        occupied = {s["slotID"] for s in slots if s.get("status") == "active"}
-        header = "      " + "".join(f"R{r}  " for r in range(1, max_t+1)) + "\n"
-        rows   = "".join(
-            f"*P{p}* " + "".join("🌱  " if f"P{p}_R{r}" in occupied else "🟫  "
-                                  for r in range(1, max_t+1)) + "\n"
-            for p in range(1, max_p+1)
-        )
-        return header + rows + "\n_Legend:_ 🌱 `Occupied`  |  🟫 `Empty`"
+        
+        # Semplificazione: se lo slot esiste, è occupato visivamente.
+        occupied = {s["slotID"] for s in slots}
+        
+        # Intestazione più pulita
+        header = "📍 " + "".join(f" *R{r}* " for r in range(1, max_t+1)) + "\n"
+        
+        rows = ""
+        for p in range(1, max_p+1):
+            row_str = f"*P{p}* "
+            for r in range(1, max_t+1):
+                slot_id = f"P{p}_R{r}"
+                emoji = "🌱" if slot_id in occupied else "⬜"
+                row_str += f" {emoji} "
+            rows += row_str + "\n"
+            
+        return f"{header}\n{rows}\n_Legend:_ 🌱 `Occupied`  |  ⬜ `Empty`"
+        
     except Exception as e:
         return f"Grid error: {e}"
-
 
 @bot.message_handler(commands=['garden'])
 def handle_show_garden(message):

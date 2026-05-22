@@ -1,10 +1,10 @@
 {
-    "lastUpdateJSON": 1779225929.3539963,
+    "lastUpdateJSON": 1779440331.4269865,
     "broker": {
         "broker_name": "message-broker",
         "port": 1883
     },
-    "waterPricePerM3": 0.005,
+    "waterPricePerM3": 2.5,
     "garden_location": "45.058614,7.6567",
     "gardensList": [
         {
@@ -141,8 +141,19 @@
                 "max_taps": 5
             },
             "device": {
-                "deviceID": "rpi_001",
-                "deviceName": "GardenGateway_003"
+                "deviceID": "RPi_003",
+                "deviceName": "GardenGateway_003",
+                "status": "active",
+                "sensors": [
+                    "SoilMoisture",
+                    "DHT11"
+                ],
+                "actuators": [
+                    "MicroServoPump"
+                ],
+                "config": {
+                    "clientID": "Client_RPi_003"
+                }
             },
             "slots": [
                 {
@@ -169,10 +180,106 @@
                 "max_pumps": 5,
                 "max_taps": 5
             },
+            "device": {
+                "deviceID": "RPi_004",
+                "deviceName": "GardenGateway_004",
+                "status": "active",
+                "sensors": [
+                    "SoilMoisture",
+                    "DHT11"
+                ],
+                "actuators": [
+                    "MicroServoPump"
+                ],
+                "config": {
+                    "clientID": "Client_RPi_004"
+                }
+            },
+            "slots": [
+                {
+                    "slotID": "P1_R1",
+                    "slotName": "Zone P1_R1",
+                    "plantID": "P1",
+                    "status": "active",
+                    "sensors": [
+                        "SoilMoisture",
+                        "DHT11"
+                    ],
+                    "actuators": [
+                        "MicroServoPump"
+                    ]
+                },
+                {
+                    "slotID": "P1_R2",
+                    "slotName": "Zone P1_R2",
+                    "plantID": "P10",
+                    "status": "active",
+                    "sensors": [
+                        "SoilMoisture",
+                        "DHT11"
+                    ],
+                    "actuators": [
+                        "MicroServoPump"
+                    ]
+                },
+                {
+                    "slotID": "P1_R3",
+                    "slotName": "Zone P1_R3",
+                    "plantID": "P5",
+                    "status": "active",
+                    "sensors": [
+                        "SoilMoisture",
+                        "DHT11"
+                    ],
+                    "actuators": [
+                        "MicroServoPump"
+                    ]
+                }
+            ],
+            "ownerIDs": [
+                "U_001"
+            ]
+        },
+        {
+            "gardenID": "G_005",
+            "gardenName": "Downstairs garden",
+            "location": "",
+            "grid": {
+                "max_pumps": 4,
+                "max_taps": 7
+            },
+            "device": {
+                "deviceID": "RPi_005",
+                "deviceName": "GardenGateway_005",
+                "status": "active",
+                "sensors": [
+                    "SoilMoisture",
+                    "DHT11"
+                ],
+                "actuators": [
+                    "MicroServoPump"
+                ],
+                "config": {
+                    "clientID": "Client_RPi_005"
+                }
+            },
+            "slots": [],
+            "ownerIDs": [
+                "U_003"
+            ]
+        },
+        {
+            "gardenID": "G_006",
+            "gardenName": "Small Garden",
+            "location": "",
+            "grid": {
+                "max_pumps": 4,
+                "max_taps": 4
+            },
             "device": {},
             "slots": [],
             "ownerIDs": [
-                "U_001"
+                "U_002"
             ]
         }
     ],
