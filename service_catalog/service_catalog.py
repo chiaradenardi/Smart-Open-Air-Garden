@@ -21,26 +21,39 @@ def _find_garden(data, garden_id):
     return None
 
 class BrokerEndpoint:
-    """This endpoint provides the IP and port of the MQTT broker."""
+    """
+    Returns MQTT broker configuration.
+    GET /broker  → {broker_name, broker_port}
+    """
     exposed = True
 
     def GET(self):
-        """Returns the broker configuration as a JSON string."""
+        """
+        GET /broker  → returns {broker_name, broker_port}
+        """
         data = _load()
         b = data["broker"]
         return json.dumps({"broker_name": b["broker_name"], "broker_port": b["port"]}, indent=4)
 
 class PriceEndpoint:
-    """This endpoint manages the cost of water per cubic meter."""
+    """
+    Water tariff configuration (per m³).
+    GET /price  → water cost per cubic meter
+    PUT /price  → update tariff
+    """
     exposed = True
 
     def GET(self):
-        """Returns the current water price."""
+        """
+        GET /price  → returns {waterPricePerM3}
+        """
         data = _load()
         return json.dumps(data["waterPricePerM3"], indent=4)
 
     def PUT(self):
-        """Updates the water price with a new value."""
+        """
+        PUT /price  (body: {waterPricePerM3})
+        """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         if "NewWaterPricePerM3" not in body:
             return json.dumps({"error": "Missing NewWaterPricePerM3"}, indent=4)
@@ -50,33 +63,101 @@ class PriceEndpoint:
         return json.dumps({"result": "Price updated", "newPrice": data["waterPricePerM3"]}, indent=4)
 
 
-# API Reference: /gardens endpoint
-# 
-# GET    /gardens                      → list all gardens
-# POST   /gardens                      → create garden
-# GET    /gardens/{gID}                → single garden
-# DELETE /gardens/{gID}                → delete garden
-# GET    /gardens/{gID}/slots          → slots list
-# POST   /gardens/{gID}/slots          → add slot
-# GET    /gardens/{gID}/slots/{sID}    → single slot
-# PUT    /gardens/{gID}/slots/{sID}    → update slot (plantID)
-# DELETE /gardens/{gID}/slots/{sID}    → remove slot
-# GET    /gardens/{gID}/device         → device info
-# PUT    /gardens/{gID}/device         → update device
-# GET    /gardens/{gID}/grid           → grid configuration
-# PUT    /gardens/{gID}/grid           → update grid
-# GET    /gardens/{gID}/location       → location
-# PUT    /gardens/{gID}/location       → update location
-# GET    /gardens/{gID}/owners         → owner user objects
-# POST   /gardens/{gID}/owners         → add owner (body: {userID})
-# DELETE /gardens/{gID}/owners/{uID}   → remove owner
+# ================================================================================
+# API REFERENCE - Service Catalog REST Endpoints
+# ================================================================================
+#
+# BROKER ENDPOINT:
+# GET    /broker                            → {broker_name, broker_port}
+#
+# PRICE ENDPOINT:
+# GET    /price                             → current water price (€/m³)
+# PUT    /price                (body: {NewWaterPricePerM3})
+#
+# GARDENS ENDPOINT:
+# GET    /gardens                           → list all gardens
+# POST   /gardens              (body: {gardenID, gardenName, location?, grid?, device?, ownerIDs?})
+# GET    /gardens/{gID}                     → single garden
+# PUT    /gardens/{gID}        (body: {gardenName?, ownerIDs?})
+# DELETE /gardens/{gID}                     → delete garden
+#
+# GARDENS SLOTS:
+# GET    /gardens/{gID}/slots               → list all slots
+# POST   /gardens/{gID}/slots (body: {slotID, plantID, slotName?, status?, sensors?, actuators?})
+# GET    /gardens/{gID}/slots/{sID}         → single slot
+# PUT    /gardens/{gID}/slots/{sID}  (body: {plantID?, slotName?, status?})
+# DELETE /gardens/{gID}/slots/{sID}         → remove slot
+#
+# GARDENS DEVICE:
+# GET    /gardens/{gID}/device              → device info
+# PUT    /gardens/{gID}/device (body: {deviceID, deviceName, status, sensors[], actuators[], config?})
+#
+# GARDENS GRID:
+# GET    /gardens/{gID}/grid                → grid config (max_pumps, max_taps)
+# PUT    /gardens/{gID}/grid    (body: {max_pumps?, max_taps?})
+#
+# GARDENS LOCATION:
+# GET    /gardens/{gID}/location            → location
+# PUT    /gardens/{gID}/location (body: {location})
+#
+# GARDENS OWNERS:
+# GET    /gardens/{gID}/owners              → list owner users
+# POST   /gardens/{gID}/owners (body: {userID})
+# DELETE /gardens/{gID}/owners/{uID}        → remove owner
+#
+# USERS ENDPOINT:
+# GET    /users                             → list all users
+# GET    /users/{uID}                       → single user
+# POST   /users                (body: {userID, userName, telegramChatID})
+# PUT    /users/{uID}          (body: {userID, telegramChatID})
+# DELETE /users/{uID}                       → delete user
+#
+# IRRIGATION STRATEGIES:
+# GET    /strategies                        → list all strategies
+# GET    /strategies/{plantID}              → single strategy
+# POST   /strategies           (body: {plantID, name, min_moisture_threshold})
+# PUT    /strategies/{plantID} (body: {plantID, min_moisture_threshold})
+# DELETE /strategies/{plantID}              → delete strategy
+#
+# SERVICES ENDPOINT:
+# GET    /services                          → list all services
+# GET    /services/{sID}                    → single service
+# POST   /services             (body: {serviceID, serviceName, status?})
+# PUT    /services/{sID}       (body: {serviceID, status})
+# DELETE /services/{sID}                    → delete service
+#
+# LOCATION ENDPOINT (Global):
+# GET    /location                          → global garden location
+# PUT    /location             (body: {location})
 
 class GardensEndpoint:
-    """This endpoint manages everything about gardens, including their slots and devices."""
+    """
+    Manages gardens, slots, devices, grid, owners.
+    GET /gardens               → list all gardens
+    GET /gardens/{gID}         → single garden
+    POST /gardens              → create garden
+    PUT /gardens/{gID}         → update garden
+    DELETE /gardens/{gID}      → delete garden
+    GET /gardens/{gID}/slots   → list slots
+    POST /gardens/{gID}/slots  → add slot
+    GET /gardens/{gID}/device  → device info
+    PUT /gardens/{gID}/device  → update device
+    GET /gardens/{gID}/owners  → list owners
+    POST /gardens/{gID}/owners → add owner
+    """
     exposed = True
 
     def GET(self, *uri, **params):
-        """Returns data about gardens. You can ask for a list of all gardens or a specific one."""
+        """
+        GET /gardens                → list all gardens
+        GET /gardens/{gID}          → single garden
+        GET /gardens/{gID}/slots    → list slots
+        GET /gardens/{gID}/slots/{sID} → single slot
+        GET /gardens/{gID}/device   → device info
+        GET /gardens/{gID}/grid     → grid config
+        GET /gardens/{gID}/location → location
+        GET /gardens/{gID}/owners   → owner users
+        """
         data = _load()
 
         # /gardens
@@ -123,7 +204,11 @@ class GardensEndpoint:
         return json.dumps({"error": "Invalid endpoint"}, indent=4)
 
     def POST(self, *uri, **params):
-        """Creates a new garden, adds a new slot, or adds a new owner to a garden."""
+        """
+        POST /gardens              (body: {gardenID, gardenName, location?, grid?, device?, ownerIDs?})
+        POST /gardens/{gID}/slots (body: {slotID, plantID, slotName?, status?, sensors?, actuators?})
+        POST /gardens/{gID}/owners (body: {userID})
+        """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         data = _load()
 
@@ -191,7 +276,13 @@ class GardensEndpoint:
         return json.dumps({"error": "Invalid endpoint"}, indent=4)
 
     def PUT(self, *uri, **params):
-        """Updates information about an existing garden, its slots, or its device."""
+        """
+        PUT /gardens/{gID}              (body: {gardenName?, ownerIDs?})
+        PUT /gardens/{gID}/slots/{sID}  (body: {plantID?, slotName?, status?})
+        PUT /gardens/{gID}/device       (body: {deviceID, deviceName, status, sensors[], actuators[], config?})
+        PUT /gardens/{gID}/grid         (body: {max_pumps?, max_taps?})
+        PUT /gardens/{gID}/location     (body: {location})
+        """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         data = _load()
 
@@ -265,7 +356,11 @@ class GardensEndpoint:
         return json.dumps({"error": "Invalid endpoint"}, indent=4)
 
     def DELETE(self, *uri, **params):
-        """Removes a garden, a slot, or an owner from the database."""
+        """
+        DELETE /gardens/{gID}             → delete entire garden
+        DELETE /gardens/{gID}/slots/{sID} → remove slot
+        DELETE /gardens/{gID}/owners/{uID} → remove owner
+        """
         data = _load()
 
         if len(uri) == 0:
@@ -308,11 +403,21 @@ class GardensEndpoint:
 # Users endpoint
 
 class UsersEndpoint:
-    """This endpoint handles user registration and linking Telegram IDs."""
+    """
+    User management and Telegram ID linking.
+    GET /users          → list all users
+    GET /users/{uID}    → single user
+    POST /users         → add user
+    PUT /users/{uID}    → update user
+    DELETE /users/{uID} → remove user
+    """
     exposed = True
 
     def GET(self, *uri, **params):
-        """Returns a list of all users or details of a specific user."""
+        """
+        GET /users        → list all users
+        GET /users/{uID}  → single user details
+        """
         data = _load()
         if len(uri) > 0:
             for u in data["usersList"]:
@@ -322,7 +427,9 @@ class UsersEndpoint:
         return json.dumps(data["usersList"], indent=4)
 
     def PUT(self, *uri, **params):
-        """Updates a user, usually to add their Telegram Chat ID."""
+        """
+        PUT /users/{uID}  (body: {userID, telegramChatID})
+        """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         data = _load()
         for u in data["usersList"]:
@@ -333,7 +440,9 @@ class UsersEndpoint:
         return json.dumps({"error": "USER ID NOT FOUND"}, indent=4)
 
     def POST(self):
-        """Registers a new user in the system."""
+        """
+        POST /users  (body: {userID, userName, telegramChatID})
+        """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         if "userID" not in body or "userName" not in body or "telegramChatID" not in body:
             return json.dumps({"error": "Missing userID, userName or telegramChatID"}, indent=4)
@@ -346,7 +455,9 @@ class UsersEndpoint:
         return json.dumps({"result": "USER successfully added"}, indent=4)
 
     def DELETE(self, *uri, **params):
-        """Deletes a user from the system."""
+        """
+        DELETE /users/{uID}
+        """
         data = _load()
         if len(uri) == 0:
             return json.dumps({"error": "Missing USER ID"}, indent=4)
@@ -361,11 +472,21 @@ class UsersEndpoint:
 # Irrigation strategies endpoint
 
 class StrategiesEndpoint:
-    """This endpoint holds the irrigation rules (like moisture thresholds) for different crops."""
+    """
+    Irrigation strategies (moisture thresholds per crop).
+    GET /strategies         → list all strategies
+    GET /strategies/{pID}   → single strategy
+    POST /strategies        → add strategy
+    PUT /strategies/{pID}   → update strategy
+    DELETE /strategies/{pID} → remove strategy
+    """
     exposed = True
 
     def GET(self, *uri, **params):
-        """Returns the irrigation strategy for all crops or a specific crop."""
+        """
+        GET /strategies         → list all strategies
+        GET /strategies/{plantID} → single strategy
+        """
         data = _load()
         if len(uri) > 0:
             plant_id = uri[0]
@@ -375,6 +496,9 @@ class StrategiesEndpoint:
         return json.dumps(data["irrigation_strategies"], indent=4)
 
     def PUT(self, *uri, **params):
+        """
+        PUT /strategies/{plantID}  (body: {plantID, min_moisture_threshold})
+        """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         data = _load()
         plant_id = body.get("plantID")
@@ -385,6 +509,9 @@ class StrategiesEndpoint:
         return json.dumps({"error": "PLANT ID NOT FOUND"}, indent=4)
 
     def POST(self):
+        """
+        POST /strategies  (body: {plantID, name, min_moisture_threshold})
+        """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         if "plantID" not in body or "name" not in body or "min_moisture_threshold" not in body:
             return json.dumps({"error": "Missing data"}, indent=4)
@@ -400,6 +527,9 @@ class StrategiesEndpoint:
         return json.dumps({"result": "Strategy added"}, indent=4)
 
     def DELETE(self, *uri, **params):
+        """
+        DELETE /strategies/{plantID}
+        """
         data = _load()
         if len(uri) == 0:
             return json.dumps({"error": "Missing STRATEGY ID"}, indent=4)
@@ -414,9 +544,21 @@ class StrategiesEndpoint:
 # Services endpoint
 
 class ServicesEndpoint:
+    """
+    Manages microservices registration.
+    GET /services          → list all services
+    GET /services/{sID}    → single service
+    POST /services         → add service
+    PUT /services/{sID}    → update service
+    DELETE /services/{sID} → remove service
+    """
     exposed = True
 
     def GET(self, *uri, **params):
+        """
+        GET /services        → list all services
+        GET /services/{sID}  → single service
+        """
         data = _load()
         if len(uri) > 0:
             for s in data["servicesList"]:
@@ -426,6 +568,9 @@ class ServicesEndpoint:
         return json.dumps(data["servicesList"], indent=4)
 
     def PUT(self, *uri, **params):
+        """
+        PUT /services/{sID}  (body: {serviceID, status})
+        """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         data = _load()
         for s in data["servicesList"]:
@@ -436,6 +581,9 @@ class ServicesEndpoint:
         return json.dumps({"error": "SERVICE ID NOT FOUND"}, indent=4)
 
     def POST(self):
+        """
+        POST /services  (body: {serviceID, serviceName, status?})
+        """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         if "serviceID" not in body or "serviceName" not in body:
             return json.dumps({"error": "Missing serviceID or serviceName"}, indent=4)
@@ -448,6 +596,9 @@ class ServicesEndpoint:
         return json.dumps({"result": "Service added"}, indent=4)
 
     def DELETE(self, *uri, **params):
+        """
+        DELETE /services/{sID}
+        """
         data = _load()
         if len(uri) == 0:
             return json.dumps({"error": "Missing SERVICE ID"}, indent=4)
@@ -462,16 +613,24 @@ class ServicesEndpoint:
 # Global location endpoint (used by WeatherServiceAdaptor)
 
 class LocationEndpoint:
-    """This endpoint stores the GPS location of the garden to fetch correct weather data."""
+    """
+    GPS location of the garden (used by WeatherServiceAdaptor).
+    GET /location  → current location (lat,lon)
+    PUT /location  → update location
+    """
     exposed = True
 
     def GET(self):
-        """Returns the current garden location."""
+        """
+        GET /location  → returns {location}
+        """
         data = _load()
         return json.dumps({"location": data.get("garden_location", "44.6458,10.9257")}, indent=4)
 
     def PUT(self):
-        """Updates the garden location with new coordinates."""
+        """
+        PUT /location  (body: {location})
+        """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         if "location" not in body:
             return json.dumps({"error": "Missing location"}, indent=4)
