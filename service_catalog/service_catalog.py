@@ -52,7 +52,7 @@ class PriceEndpoint:
 
     def PUT(self):
         """
-        PUT /price  (body: {waterPricePerM3})
+        PUT /price  (body: {NewWaterPricePerM3})
         """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
         if "NewWaterPricePerM3" not in body:
@@ -90,7 +90,7 @@ class PriceEndpoint:
 #
 # GARDENS DEVICE:
 # GET    /gardens/{gID}/device              → device info
-# PUT    /gardens/{gID}/device (body: {deviceID, deviceName, status, sensors[], actuators[], config?})
+# PUT    /gardens/{gID}/device (body: {deviceID, deviceName, status, sensors[], actuators[]})
 #
 # GARDENS GRID:
 # GET    /gardens/{gID}/grid                → grid config (max_pumps, max_taps)
@@ -279,7 +279,7 @@ class GardensEndpoint:
         """
         PUT /gardens/{gID}              (body: {gardenName?, ownerIDs?})
         PUT /gardens/{gID}/slots/{sID}  (body: {plantID?, slotName?, status?})
-        PUT /gardens/{gID}/device       (body: {deviceID, deviceName, status, sensors[], actuators[], config?})
+        PUT /gardens/{gID}/device       (body: {deviceID, deviceName, status, sensors[], actuators[]})
         PUT /gardens/{gID}/grid         (body: {max_pumps?, max_taps?})
         PUT /gardens/{gID}/location     (body: {location})
         """
@@ -431,6 +431,8 @@ class UsersEndpoint:
         PUT /users/{uID}  (body: {userID, telegramChatID})
         """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
+        if "userID" not in body or "telegramChatID" not in body:
+            return json.dumps({"error": "Missing userID or telegramChatID"}, indent=4)
         data = _load()
         for u in data["usersList"]:
             if body.get("userID") == u["userID"]:
@@ -500,6 +502,8 @@ class StrategiesEndpoint:
         PUT /strategies/{plantID}  (body: {plantID, min_moisture_threshold})
         """
         body = json.loads(cherrypy.request.body.read().decode('utf-8'))
+        if "min_moisture_threshold" not in body:
+            return json.dumps({"error": "Missing min_moisture_threshold"}, indent=4)
         data = _load()
         plant_id = body.get("plantID")
         if plant_id and plant_id in data["irrigation_strategies"]:
