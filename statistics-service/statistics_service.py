@@ -193,7 +193,7 @@ class StatisticsService:
         return self.mqtt.is_connected()
 
 
-# ==================== CHERRYPY APP SETUP ====================
+# CHERRYPY APP SETUP 
 
 # Configuration
 INFLUX_ADAPTOR_URL = os.getenv("INFLUX_ADAPTOR_URL", "http://influx-adaptor:8081")
@@ -209,7 +209,7 @@ statistics_service = StatisticsService(
     CATALOG_URL
 )
 
-# ==================== API REST ENDPOINTS ====================
+# API REST ENDPOINTS 
 
 class WaterSavedEndpoint:
     """This web endpoint returns the water savings report."""
@@ -276,7 +276,7 @@ class HealthEndpoint:
             "mqtt_connected": statistics_service.get_mqtt_status()
         }).encode('utf-8')
 
-# ==================== MAIN ====================
+# MAIN 
 
 if __name__ == '__main__':
     logger.info("[MAIN] Statistics Service started")
