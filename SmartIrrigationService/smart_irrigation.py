@@ -102,6 +102,8 @@ class SmartIrrigation:
                     try:
                         wr      = requests.get(self.weather_adaptor_url, timeout=5).json()
                         rain_6h = wr.get("total_rain_accumulation_6h", 0)
+                        #stress test
+                        #rain_6h = 50.0
                     except Exception as e:
                         print(f"  [!] Weather error: {e}. Proceeding with irrigation.")
 

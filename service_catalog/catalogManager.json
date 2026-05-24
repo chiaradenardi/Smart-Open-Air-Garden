@@ -1,5 +1,5 @@
 {
-    "lastUpdateJSON": 1779440331.4269865,
+    "lastUpdateJSON": 1779639853.4710352,
     "broker": {
         "broker_name": "message-broker",
         "port": 1883
@@ -12,8 +12,8 @@
             "gardenName": "Main Garden",
             "location": "45.058614,7.6567",
             "grid": {
-                "max_pumps": 1,
-                "max_taps": 1
+                "max_pumps": 5,
+                "max_taps": 5
             },
             "device": {
                 "deviceID": "RPi_001",
